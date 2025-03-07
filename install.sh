@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# filepath: /workspaces/Nixos-Hyprland/install.sh
 
 set -e
 
@@ -10,20 +9,21 @@ REPO_URL="https://github.com/yourusername/Nixos-Hyprland.git"
 TEMP_DIR="$(mktemp -d)"
 NIXOS_CONFIG_DIR="/etc/nixos"
 CONFIG_DIR="$HOME/.config"
-AVAILABLE_MODULES=("hyprland" "app" "games" "dev" "media" "security" "virtualization")
+
+# Update paths to reflect directory structure
+SYSTEM_DIR="nixos"
+USER_DIR="home-manager"
+
+# Installation mode
+USER_ONLY=0
+SYSTEM_ONLY=0
 USE_FLAKES=0
-USERNAME=""
-HOST_NAME=""
 
-# Initialize with all modules
-SELECTED_MODULES=("${AVAILABLE_MODULES[@]}")
-ONLY_MODULES=()
-EXCLUDE_MODULES=()
-
-# Module dependencies
+# Variables to be populated from module-classification.nix
+SYSTEM_MODULES=()
+USER_MODULES=()
+AVAILABLE_MODULES=()
 declare -A MODULE_DEPS
-MODULE_DEPS["dev"]="virtualization" # dev depends on virtualization
-MODULE_DEPS["games"]="security"     # games might depend on security for Steam
 
 cleanup() {
     echo "Cleaning up temporary files..."
@@ -32,11 +32,95 @@ cleanup() {
 
 trap cleanup EXIT
 
+# Define the load_module_classification function early to use it for help and validation
+load_module_classification() {
+    echo "Loading module classification..."
+    local classification_file="$TEMP_DIR/$SYSTEM_DIR/module-classification.nix"
+    
+    if [ ! -f "$classification_file" ]; then
+        echo "Error: Module classification file not found at $classification_file"
+        echo "Cannot continue without module definitions."
+        exit 1
+    fi
+    
+    # Extract module lists - using grep and awk for robust parsing
+    echo "  - Reading available modules..."
+    AVAILABLE_MODULES=($(grep -A50 "all = \[" "$classification_file" | grep -B50 "\];" | grep "\"" | awk -F'"' '{print $2}' | grep -v '^$'))
+    
+    echo "  - Reading system modules..."
+    SYSTEM_MODULES=($(grep -A50 "system = \[" "$classification_file" | grep -B50 "\];" | grep "\"" | awk -F'"' '{print $2}' | grep -v '^$'))
+    
+    echo "  - Reading user modules..."
+    USER_MODULES=($(grep -A50 "user = \[" "$classification_file" | grep -B50 "\];" | grep "\"" | awk -F'"' '{print $2}' | grep -v '^$'))
+    
+    echo "  - Reading module dependencies..."
+    # Parse dependencies section - more complex as it's nested
+    local in_deps=0
+    local current_module=""
+    
+    while IFS= read -r line; do
+        if [[ "$line" == *"dependencies = {"* ]]; then
+            in_deps=1
+            continue
+        fi
+        
+        if [[ $in_deps -eq 1 ]]; then
+            if [[ "$line" == *"};"* ]]; then
+                in_deps=0
+                continue
+            fi
+            
+            # Extract module name
+            if [[ "$line" =~ \"([^\"]+)\"[[:space:]]*=[[:space:]]*\[ ]]; then
+                current_module="${BASH_REMATCH[1]}"
+                continue
+            fi
+            
+            # Extract dependencies for current module
+            if [[ "$line" =~ \"([^\"]+)\" && -n "$current_module" ]]; then
+                dep_module="${BASH_REMATCH[1]}"
+                if [[ -z "${MODULE_DEPS[$current_module]}" ]]; then
+                    MODULE_DEPS[$current_module]="$dep_module"
+                else
+                    MODULE_DEPS[$current_module]="${MODULE_DEPS[$current_module]} $dep_module"
+                fi
+            fi
+        fi
+    done < "$classification_file"
+    
+    # Log what we found
+    echo "Found ${#AVAILABLE_MODULES[@]} available modules"
+    echo "Found ${#SYSTEM_MODULES[@]} system modules"
+    echo "Found ${#USER_MODULES[@]} user modules"
+    echo "Found ${#MODULE_DEPS[@]} module dependency relationships"
+}
+
+# Download or copy configuration files early to access the module classification
+if [[ -n "$LOCAL_PATH" ]]; then
+    echo "Using local configuration files from $LOCAL_PATH..."
+    cp -r "$LOCAL_PATH" "$TEMP_DIR"
+else
+    echo "Downloading configuration files..."
+    git clone --depth 1 "$REPO_URL" "$TEMP_DIR" || {
+        echo "Failed to clone repository. Please check your internet connection and the repository URL."
+        exit 1
+    }
+fi
+
+# Load module information right away so we can use it for help and validation
+load_module_classification
+
+# Now we can initialize the selected modules after knowing what's available
+SELECTED_MODULES=(${AVAILABLE_MODULES[@]})
+ONLY_MODULES=()
+EXCLUDE_MODULES=()
+
 show_help() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  --user-only                Install only user configurations, not system configurations"
+    echo "  --user-only                Install only user configurations via home-manager"
+    echo "  --system-only              Install only system configurations (requires sudo)"
     echo "  --only MODULE1,MODULE2     Only install specified modules (comma-separated)"
     echo "  --exclude MODULE1,MODULE2  Exclude specified modules (comma-separated)"
     echo "  --list-modules             List available modules"
@@ -44,11 +128,28 @@ show_help() {
     echo "  --local PATH               Use local files instead of cloning repository"
     echo "  --help                     Show this help message"
     echo ""
-    echo "Available modules: ${AVAILABLE_MODULES[*]}"
+    echo "Installation Modes:"
+    echo "  default                    Install both system and user configurations"
+    echo "  --user-only                Install only home-manager configurations"
+    echo "  --system-only              Install only system configurations"
+    echo ""
+    echo "Available Modules:"
+    echo "  System Modules:"
+    for module in "${SYSTEM_MODULES[@]}"; do
+        echo "    - $module"
+    done
+    echo ""
+    echo "  User Modules:"
+    for module in "${USER_MODULES[@]}"; do
+        echo "    - $module"
+    done
+    
     echo ""
     echo "Examples:"
-    echo "  $0 --only hyprland,app     # Only install hyprland and app modules"
-    echo "  $0 --exclude games,media   # Install all modules except games and media"
+    echo "  $0 --only desktop-system,apps          # Install specific modules"
+    echo "  $0 --exclude gaming-system,gaming-user # Install all except gaming modules"
+    echo "  $0 --system-only --only desktop-system # Install only desktop at system level"
+    echo "  $0 --user-only --only desktop-user,dev # Install only desktop and dev at user level"
 }
 
 # Parse command line arguments
@@ -56,6 +157,10 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --user-only)
             USER_ONLY=1
+            shift
+            ;;
+        --system-only)
+            SYSTEM_ONLY=1
             shift
             ;;
         --only)
@@ -75,8 +180,20 @@ while [[ $# -gt 0 ]]; do
             ;;
         --list-modules)
             echo "Available modules:"
-            for module in "${AVAILABLE_MODULES[@]}"; do
-                echo " - $module"
+            echo "  System Modules (installed to /etc/nixos):"
+            for module in "${SYSTEM_MODULES[@]}"; do
+                echo "    - $module"
+                if [[ -n "${MODULE_DEPS[$module]}" ]]; then
+                    echo "      Dependencies: ${MODULE_DEPS[$module]}"
+                fi
+            done
+            echo ""
+            echo "  User Modules (installed via home-manager):"
+            for module in "${USER_MODULES[@]}"; do
+                echo "    - $module"
+                if [[ -n "${MODULE_DEPS[$module]}" ]]; then
+                    echo "      Dependencies: ${MODULE_DEPS[$module]}"
+                fi
             done
             exit 0
             ;;
@@ -100,8 +217,15 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Check for conflicting options
+if [[ $USER_ONLY -eq 1 && $SYSTEM_ONLY -eq 1 ]]; then
+    echo "Error: --user-only and --system-only cannot be used together."
+    echo "Please choose only one installation mode."
+    exit 1
+fi
+
 # Check if running as root for NixOS config changes
-if [[ $EUID -ne 0 && -z "$USER_ONLY" ]]; then
+if [[ $EUID -ne 0 && $USER_ONLY -eq 0 ]]; then
     echo "This script needs to be run as root to modify system configuration."
     echo "Run with --user-only to only install user configurations."
     exit 1
@@ -129,7 +253,7 @@ if [[ ${#EXCLUDE_MODULES[@]} -gt 0 ]]; then
     SELECTED_MODULES=("${TEMP_MODULES[@]}")
 fi
 
-# Add a new function to handle module dependencies
+# Add a function to handle module dependencies
 resolve_dependencies() {
     local -a RESOLVED_MODULES=()
     
@@ -161,7 +285,7 @@ resolve_dependencies() {
 
 # Add username prompt
 prompt_for_username() {
-    if [[ -z "$USER_ONLY" ]]; then
+    if [[ $USER_ONLY -eq 0 ]]; then
         read -p "Enter your username (will be used in the configuration): " USERNAME
         if [[ -z "$USERNAME" ]]; then
             echo "Username cannot be empty. Using 'nixos' as default."
@@ -186,26 +310,8 @@ prompt_for_username
 
 echo "Installing modules: ${SELECTED_MODULES[*]}"
 
-# Download or copy configuration files
-if [[ -n "$LOCAL_PATH" ]]; then
-    echo "Using local configuration files from $LOCAL_PATH..."
-    cp -r "$LOCAL_PATH" "$TEMP_DIR"
-else
-    echo "Downloading configuration files..."
-    git clone --depth 1 "$REPO_URL" "$TEMP_DIR" || {
-        echo "Failed to clone repository. Please check your internet connection and the repository URL."
-        exit 1
-    }
-fi
-
-# Validate repository structure
-if [[ ! -d "$TEMP_DIR/Nixos" || ! -d "$TEMP_DIR/config" ]]; then
-    echo "Error: Invalid repository structure. Missing required directories."
-    exit 1
-fi
-
 # Install NixOS configuration
-if [[ -z "$USER_ONLY" ]]; then
+if [[ $USER_ONLY -eq 0 ]]; then
     echo "Installing NixOS configuration..."
     
     # Backup existing configuration
@@ -220,17 +326,18 @@ if [[ -z "$USER_ONLY" ]]; then
     mkdir -p "$NIXOS_CONFIG_DIR/modules"
     
     # Copy main configuration file
-    cp "$TEMP_DIR/Nixos/configuration.nix" "$NIXOS_CONFIG_DIR/"
+    cp "$TEMP_DIR/$SYSTEM_DIR/configuration.nix" "$NIXOS_CONFIG_DIR/"
     
     # Replace username placeholder in configuration files
-    find "$TEMP_DIR/Nixos" -type f -name "*.nix" -exec sed -i "s/YOUR_USERNAME/$USERNAME/g" {} \;
+    find "$TEMP_DIR/$SYSTEM_DIR" -type f -name "*.nix" -exec sed -i "s/YOUR_USERNAME/$USERNAME/g" {} \;
     
     # Replace hostname in flake.nix if using flakes
-    if [[ $USE_FLAKES -eq 1 && -f "$TEMP_DIR/Nixos/flake.nix" ]]; then
-        sed -i "s/hyprland = nixpkgs.lib.nixosSystem/$HOST_NAME = nixpkgs.lib.nixosSystem/g" "$TEMP_DIR/Nixos/flake.nix"
+    if [[ $USE_FLAKES -eq 1 && -f "$TEMP_DIR/$SYSTEM_DIR/flake.nix" ]]; then
+        sed -i "s/hyprland = nixpkgs.lib.nixosSystem/$HOST_NAME = nixpkgs.lib.nixosSystem/g" "$TEMP_DIR/$SYSTEM_DIR/flake.nix"
     fi
     
-    # Generate custom imports.nix based on selected modules
+    # Generate custom imports.nix for the system level based on selected modules
+    echo "Generating system-level imports..."
     cat > "$NIXOS_CONFIG_DIR/modules/imports.nix" << EOF
 { config, lib, pkgs, ... }:
 
@@ -238,12 +345,15 @@ if [[ -z "$USER_ONLY" ]]; then
   imports = [
 EOF
 
-    # Add selected modules to imports
+    # Add selected system-level modules to imports
     for module in "${SELECTED_MODULES[@]}"; do
-        if [ -f "$TEMP_DIR/Nixos/modules/$module.nix" ]; then
-            echo "    # Including $module module"
-            echo "    ./$module.nix" >> "$NIXOS_CONFIG_DIR/modules/imports.nix"
-            cp "$TEMP_DIR/Nixos/modules/$module.nix" "$NIXOS_CONFIG_DIR/modules/"
+        # Check if this module should be included at system level
+        if [[ " ${SYSTEM_MODULES[*]} " =~ " ${module} " || " ${MIXED_MODULES[*]} " =~ " ${module} " ]]; then
+            if [ -f "$TEMP_DIR/$SYSTEM_DIR/modules/$module.nix" ]; then
+                echo "    # Including system module: $module"
+                echo "    ./$module.nix" >> "$NIXOS_CONFIG_DIR/modules/imports.nix"
+                cp "$TEMP_DIR/$SYSTEM_DIR/modules/$module.nix" "$NIXOS_CONFIG_DIR/modules/"
+            fi
         fi
     done
 
@@ -261,20 +371,20 @@ EOF
     
     # Use flakes if requested
     if [[ $USE_FLAKES -eq 1 ]]; then
-        if [[ ! -f "$TEMP_DIR/Nixos/flake.nix" ]]; then
+        if [[ ! -f "$TEMP_DIR/$SYSTEM_DIR/flake.nix" ]]; then
             echo "Error: Flakes configuration requested but flake.nix not found."
             exit 1
         fi
         
         # Copy flake files and ensure home-manager directory exists
         echo "Setting up flake configuration..."
-        cp "$TEMP_DIR/Nixos/flake.nix" "$NIXOS_CONFIG_DIR/"
-        [[ -f "$TEMP_DIR/Nixos/flake.lock" ]] && cp "$TEMP_DIR/Nixos/flake.lock" "$NIXOS_CONFIG_DIR/"
+        cp "$TEMP_DIR/$SYSTEM_DIR/flake.nix" "$NIXOS_CONFIG_DIR/"
+        [[ -f "$TEMP_DIR/$SYSTEM_DIR/flake.lock" ]] && cp "$TEMP_DIR/$SYSTEM_DIR/flake.lock" "$NIXOS_CONFIG_DIR/"
         
         # Copy the home-manager directory for the flake
-        if [[ -d "$TEMP_DIR/Nixos/home-manager" ]]; then
+        if [[ -d "$TEMP_DIR/$SYSTEM_DIR/home-manager" ]]; then
             mkdir -p "$NIXOS_CONFIG_DIR/home-manager"
-            cp -r "$TEMP_DIR/Nixos/home-manager/"* "$NIXOS_CONFIG_DIR/home-manager/"
+            cp -r "$TEMP_DIR/$SYSTEM_DIR/home-manager/"* "$NIXOS_CONFIG_DIR/home-manager/"
         else
             echo "Warning: Could not find home-manager configuration for flakes."
         fi
@@ -303,17 +413,80 @@ EOF
     fi
 fi
 
+# Install home-manager configuration with proper imports
+if [[ $SYSTEM_ONLY -eq 0 && -d "$TEMP_DIR/$USER_DIR" ]]; then
+    echo "Setting up home-manager configuration..."
+    mkdir -p "$HOME/.config/home-manager/modules"
+    
+    # Copy base home-manager configuration files
+    cp "$TEMP_DIR/$USER_DIR/home.nix" "$HOME/.config/home-manager/"
+    
+    # Generate imports.nix for home-manager based on selected modules
+    echo "Generating user-level imports..."
+    cat > "$HOME/.config/home-manager/modules/imports.nix" << EOF
+{ config, lib, pkgs, ... }:
+
+{
+  imports = [
+EOF
+
+    # Add selected user-level modules to imports - Fix for app vs apps inconsistency
+    for module in "${SELECTED_MODULES[@]}"; do
+        # Check if this module should be included at user level
+        if [[ " ${USER_MODULES[*]} " =~ " ${module} " || " ${MIXED_MODULES[*]} " =~ " ${module} " ]]; then
+            # Check first for exact module name
+            if [ -f "$TEMP_DIR/$USER_DIR/modules/$module.nix" ]; then
+                echo "    # Including user module: $module"
+                echo "    ./$module.nix" >> "$HOME/.config/home-manager/modules/imports.nix"
+                cp "$TEMP_DIR/$USER_DIR/modules/$module.nix" "$HOME/.config/home-manager/modules/"
+            # Then check for plural version (app vs apps)
+            elif [ -f "$TEMP_DIR/$USER_DIR/modules/${module}s.nix" ]; then
+                echo "    # Including user module: ${module}s"
+                echo "    ./${module}s.nix" >> "$HOME/.config/home-manager/modules/imports.nix"
+                cp "$TEMP_DIR/$USER_DIR/modules/${module}s.nix" "$HOME/.config/home-manager/modules/"
+            fi
+        fi
+    done
+
+    # Copy utils module if it exists - since it's common on both sides
+    if [ -f "$TEMP_DIR/$USER_DIR/modules/utils.nix" ]; then
+        if ! grep -q "./utils.nix" "$HOME/.config/home-manager/modules/imports.nix"; then
+            echo "    # Including utilities module"
+            echo "    ./utils.nix" >> "$HOME/.config/home-manager/modules/imports.nix"
+            cp "$TEMP_DIR/$USER_DIR/modules/utils.nix" "$HOME/.config/home-manager/modules/"
+        fi
+    fi
+
+    cat >> "$HOME/.config/home-manager/modules/imports.nix" << EOF
+  ];
+}
+EOF
+
+    # Replace username in home-manager configs
+    find "$HOME/.config/home-manager" -type f -name "*.nix" -exec sed -i "s/YOUR_USERNAME/$USERNAME/g" {} \;
+    
+    read -p "Do you want to build the home-manager configuration? (y/n) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        if command -v home-manager &> /dev/null; then
+            home-manager switch
+        else
+            echo "home-manager not found. Please install it first."
+        fi
+    fi
+fi
+
 # For home-manager with flakes (standalone)
-if [[ -d "$TEMP_DIR/Nixos/home-manager" && $USE_FLAKES -eq 1 ]]; then
+if [[ -d "$TEMP_DIR/$USER_DIR" && $USE_FLAKES -eq 1 ]]; then
     echo "Setting up standalone home-manager flake..."
     mkdir -p "$HOME/.config/home-manager"
     
     # Copy flake files for standalone home-manager
-    cp "$TEMP_DIR/Nixos/flake.nix" "$HOME/.config/home-manager/"
-    [[ -f "$TEMP_DIR/Nixos/flake.lock" ]] && cp "$TEMP_DIR/Nixos/flake.lock" "$HOME/.config/home-manager/"
+    cp "$TEMP_DIR/$SYSTEM_DIR/flake.nix" "$HOME/.config/home-manager/"
+    [[ -f "$TEMP_DIR/$SYSTEM_DIR/flake.lock" ]] && cp "$TEMP_DIR/flake.lock" "$HOME/.config/home-manager/"
     
     # Copy home-manager configurations
-    cp -r "$TEMP_DIR/Nixos/home-manager" "$HOME/.config/"
+    cp -r "$TEMP_DIR/$USER_DIR" "$HOME/.config/"
     
     # Replace username in home-manager configs and flake
     find "$HOME/.config/home-manager" -type f -name "*.nix" -exec sed -i "s/YOUR_USERNAME/$USERNAME/g" {} \;
@@ -333,26 +506,21 @@ for module in "${SELECTED_MODULES[@]}"; do
     fi
 done
 
-# Check for home-manager configuration
-if [[ -d "$TEMP_DIR/home-manager" ]]; then
-    echo "Home-manager configuration found. Installing..."
-    
-    # Replace username in home-manager configs
-    find "$TEMP_DIR/home-manager" -type f -name "*.nix" -exec sed -i "s/YOUR_USERNAME/$USERNAME/g" {} \;
-    
-    mkdir -p "$HOME/.config/home-manager"
-    cp -r "$TEMP_DIR/home-manager/"* "$HOME/.config/home-manager/"
-    
-    read -p "Do you want to build the home-manager configuration? (y/n) " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        if command -v home-manager &> /dev/null; then
-            home-manager switch
-        else
-            echo "home-manager not found. Please install it first."
-        fi
-    fi
+# Display installation summary
+echo "=== Installation Summary ==="
+if [[ $USER_ONLY -eq 1 ]]; then
+    echo "Mode: User-only (home-manager)"
+elif [[ $SYSTEM_ONLY -eq 1 ]]; then
+    echo "Mode: System-only (NixOS)"
+else
+    echo "Mode: Complete (system and user)"
 fi
-
+echo "Installed modules: ${SELECTED_MODULES[*]}"
 echo "Installation completed!"
-echo "Log out and select Hyprland session to start using your new desktop environment."
+
+if [[ $SYSTEM_ONLY -eq 0 ]]; then
+    echo "To apply home-manager changes: home-manager switch"
+fi
+if [[ $USER_ONLY -eq 0 ]]; then
+    echo "Log out and select Hyprland session to start using your new desktop environment."
+fi

@@ -1,37 +1,21 @@
 { config, lib, pkgs, ... }:
 
 {
-  # Enable Steam
+  # System-level gaming configurations
+  
+  # Steam system integration
   programs.steam = {
     enable = true;
     remotePlay.openFirewall = true;
     dedicatedServer.openFirewall = true;
   };
   
-  # Gaming optimizations
+  # Gaming optimizations for kernel
   boot.kernel.sysctl = {
     "vm.max_map_count" = 2147483642;  # For games using a lot of memory maps
   };
 
-  # Gaming packages
-  environment.systemPackages = with pkgs; [
-    steam               # Valve's gaming platform
-    heroic              # GOG and Epic Games launcher
-    gamemode            # Game performance optimizations
-    
-    # Performance tools
-    goverlay            # Vulkan/OpenGL overlay manager
-    
-    # Emulators
-    # retroarch           # Unified emulator frontend
-    # dolphin-emu         # GameCube/Wii emulator
-    # pcsx2               # PlayStation 2 emulator
-    
-    # Gamepad support
-    xboxdrv             # Advanced Xbox controller driver
-  ];
-
-  # Enable GameMode
+  # Enable GameMode system service
   programs.gamemode = {
     enable = true;
     settings = {
@@ -49,7 +33,12 @@
   hardware.opengl.driSupport32Bit = true;
   hardware.pulseaudio.support32Bit = config.hardware.pulseaudio.enable;
   
-  # Controllers
+  # Controllers support
   hardware.xpadneo.enable = true;  # Enhanced Xbox controller driver
   hardware.steam-hardware.enable = true;  # Steam controller support
+  
+  # System packages needed for gaming
+  environment.systemPackages = with pkgs; [
+    gamemode            # Game performance optimizations (system component)
+  ];
 }

@@ -1,7 +1,7 @@
 { config, lib, pkgs, inputs ? {}, ... }:
 
 {
-  # Enable Hyprland through home-manager
+  # User-level Hyprland configuration
   wayland.windowManager.hyprland = {
     enable = true;
     xwayland.enable = true;
@@ -9,20 +9,17 @@
     # Use Hyprland from flake inputs if available
     package = lib.mkIf (inputs ? hyprland) inputs.hyprland.packages.${pkgs.system}.hyprland;
     
-    # Define system-wide environment variables
-    systemd = {
-      enable = true;
-      variables = [
-        "NIXOS_OZONE_WL=1"
-        "MOZ_ENABLE_WAYLAND=1"
-        "QT_QPA_PLATFORM=wayland"
-        "QT_WAYLAND_DISABLE_WINDOWDECORATION=1"
-        "SDL_VIDEODRIVER=wayland"
-        "_JAVA_AWT_WM_NONREPARENTING=1"
-      ];
-    };
+    # Define user environment variables
+    systemd.variables = [
+      "NIXOS_OZONE_WL=1"
+      "MOZ_ENABLE_WAYLAND=1"
+      "QT_QPA_PLATFORM=wayland"
+      "QT_WAYLAND_DISABLE_WINDOWDECORATION=1"
+      "SDL_VIDEODRIVER=wayland"
+      "_JAVA_AWT_WM_NONREPARENTING=1"
+    ];
     
-    # Custom Hyprland config - can be overridden by user config files
+    # Custom Hyprland config
     extraConfig = ''
       # Monitor configuration
       monitor=,preferred,auto,auto
@@ -41,7 +38,7 @@
 
       # Input configuration
       input {
-          kb_layout = us  # Change to your preferred layout
+          kb_layout = fr  # Match the system layout
           kb_variant =
           kb_model =
           kb_options =
@@ -66,7 +63,7 @@
       bind = SUPER, B, exec, $browser
       
       # Screenshot
-      bind = SUPER, S, exec, grim -g "$(slurp)" - | wl-copy
+      bind = SUPER, S, exec, grimblast copy area
       
       # Move focus with SUPER + arrow keys
       bind = SUPER, left, movefocus, l
@@ -99,6 +96,25 @@
       bind = SUPER SHIFT, 0, movetoworkspace, 10
     '';
   };
+
+  # User-specific desktop utilities (moved from system)
+  home.packages = with pkgs; [
+    # Desktop environment utilities
+    waybar              # Status bar
+    swww                # Wallpaper daemon 
+    mako                # Notification daemon
+    wofi                # Application launcher
+    swaybg              # Wallpaper utility
+    
+    # Wayland utilities
+    hyprpicker          # Color picker
+    swayidle            # Idle management
+    kanshi              # Dynamic display management
+    grimblast           # Screenshot utility
+    
+    # Lock screen
+    swaylock-effects    # Screen locker with effects
+  ];
   
   # Configure waybar
   programs.waybar = {

@@ -5,17 +5,20 @@ A simple, ready-to-use Hyprland configuration for NixOS with modular components.
 ## Quick Install
 
 ```bash
-# Full installation (requires sudo)
+# Full installation (system + user, requires sudo)
 curl -sSL https://raw.githubusercontent.com/yourusername/Nixos-Hyprland/main/install.sh | sudo bash
 
-# Install user configuration only
+# Install only user configurations via home-manager
 curl -sSL https://raw.githubusercontent.com/yourusername/Nixos-Hyprland/main/install.sh | bash --user-only
 
+# Install only system configurations (requires sudo)
+curl -sSL https://raw.githubusercontent.com/yourusername/Nixos-Hyprland/main/install.sh | sudo bash --system-only
+
 # Install specific modules only
-curl -sSL https://raw.githubusercontent.com/yourusername/Nixos-Hyprland/main/install.sh | sudo bash --only hyprland,app
+curl -sSL https://raw.githubusercontent.com/yourusername/Nixos-Hyprland/main/install.sh | sudo bash --only desktop-system,apps
 
 # Install everything except gaming components
-curl -sSL https://raw.githubusercontent.com/yourusername/Nixos-Hyprland/main/install.sh | sudo bash --exclude games
+curl -sSL https://raw.githubusercontent.com/yourusername/Nixos-Hyprland/main/install.sh | sudo bash --exclude gaming-system,gaming-user
 
 # Use Nix Flakes (recommended for better reproducibility)
 curl -sSL https://raw.githubusercontent.com/yourusername/Nixos-Hyprland/main/install.sh | sudo bash --flakes
@@ -23,13 +26,22 @@ curl -sSL https://raw.githubusercontent.com/yourusername/Nixos-Hyprland/main/ins
 
 ## Available Modules
 
-- `hyprland` - Hyprland window manager and core components
-- `app` - Common applications for everyday use
-- `games` - Gaming software, emulators, and optimizations
-- `dev` - Development tools, languages, and services
-- `media` - Media creation and consumption software
-- `security` - Security tools and configurations
-- `virtualization` - Virtual machine and container tools
+This configuration uses a clean separation between system and user-level components:
+
+### System-level modules:
+- `desktop-system` - Core Hyprland/Wayland system integration, display manager
+- `gaming-system` - Gaming drivers, kernel optimizations, 32-bit libraries
+- `system-utils` - System-level utilities and tools
+- `security` - Security features and system services
+- `virtualization` - VM and container support
+
+### User-level modules:
+- `desktop-user` - User-specific Hyprland configuration and desktop tools
+- `apps` - User applications (browsers, office, etc.)
+- `gaming-user` - Gaming applications and launchers
+- `dev` - Development tools and languages
+- `media` - Media creation and consumption tools
+- `user-utils` - User-level utilities
 
 ## Features
 
@@ -59,12 +71,22 @@ nano install.sh
 ./install.sh --list-modules
 
 # Run it with your preferred options
-sudo ./install.sh --flakes --exclude games,dev
+sudo ./install.sh --flakes --exclude gaming-system,gaming-user,dev
 ```
+
+## Module Organization
+
+### Why this separation?
+- **System level**: Contains services, drivers, and system-wide settings that require elevated privileges
+- **User level**: Contains applications and configurations that don't require special system access
+
+When you install modules like "desktop-system" and "desktop-user" together, you get a complete desktop environment with proper separation of concerns.
 
 ## Customization
 
-! Default keyboard layout is `fr`, you can change it into `configuration.nix` and `hyprland.nix` (you must change it in both at once)
+- System-wide settings: `/etc/nixos/configuration.nix`
+- User-specific settings: `~/.config/home-manager/home.nix`
+- Keyboard layout: Set to `fr` by default - modify in both locations for consistency
 
 Edit the following files to customize your setup:
 
@@ -132,3 +154,50 @@ To customize your flake configuration:
      imports = [ inputs.nixvim.nixosModules.nixvim ];
    }
    ```
+
+## Keyboard Layout
+
+This configuration uses **French (fr)** keyboard layout by default. To change it:
+
+1. In the system configuration (`/etc/nixos/configuration.nix`):
+   ```nix
+   services.xserver = {
+     layout = "fr";  # Change to your preferred layout (e.g., "us", "de")
+     xkbVariant = "";  # Use variants like "dvorak" or "colemak" if needed
+   };
+   console.keyMap = "fr";  # Change to match your layout
+   ```
+
+2. In the Hyprland configuration (`~/.config/home-manager/modules/hyprland.nix`):
+   ```nix
+   input {
+       kb_layout = fr  # Change to match system layout
+       # ...other input settings...
+   }
+   ```
+
+3. Rebuild your system after making these changes.
+
+## Package Organization
+
+This configuration carefully separates packages between system and user levels:
+
+- **System-level packages**: Installed globally, include core services and drivers
+- **User-level packages**: Managed through Home Manager, include applications used by the user
+
+If you find duplicate packages installed at both levels, you can adjust the files in:
+- System modules: `/etc/nixos/modules/`
+- User modules: `~/.config/home-manager/modules/`
+
+## Installation Examples
+
+```bash
+# Install complete desktop setup
+curl -sSL https://raw.githubusercontent.com/yourusername/Nixos-Hyprland/main/install.sh | sudo bash --only desktop-system,desktop-user,apps,dev
+
+# Install only system components
+curl -sSL https://raw.githubusercontent.com/yourusername/Nixos-Hyprland/main/install.sh | sudo bash --system-only --only desktop-system,security
+
+# Install only user components
+curl -sSL https://raw.githubusercontent.com/yourusername/Nixos-Hyprland/main/install.sh | bash --user-only --only desktop-user,apps,dev
+```

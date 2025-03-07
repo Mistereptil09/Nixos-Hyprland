@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 {
-  # Enable Hyprland and Wayland support
+  # System-level Hyprland and Wayland integration
   programs.hyprland = {
     enable = true;
     xwayland.enable = true;
@@ -20,7 +20,17 @@
     wayland.enable = true;
   };
 
-  # Session variables for Hyprland and Wayland
+  # Global keyboard layout
+  services.xserver = {
+    xkb = {
+      layout = "fr";  # Change to your preferred layout
+      variant = "";
+    };
+  };
+  
+  console.keyMap = "fr";  # Same as xkb.layout above
+
+  # System-wide session variables
   environment.sessionVariables = {
     NIXOS_OZONE_WL = "1";    
     MOZ_ENABLE_WAYLAND = "1";
@@ -34,12 +44,11 @@
     XDG_SESSION_TYPE = "wayland";
   };
 
-  # Additional Wayland utilities
+  # Only core system packages needed for Hyprland to function
   environment.systemPackages = with pkgs; [
-    grimblast         # Enhanced screenshot tool combining grim, slurp and other tools
-    hyprpicker        # Color picker tool for Hyprland
-    swayidle          # Idle management daemon for Wayland
-    kanshi            # Dynamic display configuration tool (auto-configures displays)
-    xdg-utils         # Desktop integration utilities for opening files/URLs with correct apps
+    libnotify           # Desktop notifications library
+    wl-clipboard        # Clipboard utilities for Wayland
+    xdg-utils           # Desktop integration utilities 
+    xdg-desktop-portal-hyprland # Hyprland portal for screen sharing
   ];
 }
