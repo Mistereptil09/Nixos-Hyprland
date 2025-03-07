@@ -1,0 +1,62 @@
+{ config, lib, pkgs, inputs ? {}, username ? "YOUR_USERNAME", ... }:
+
+{
+  imports = [
+    # Import specific module configurations
+    ./modules/hyprland.nix
+    # Add more modules as needed
+  ];
+
+  # Home Manager needs a bit of information about you and the paths it should manage
+  home = {
+    username = username;
+    homeDirectory = "/home/${username}";
+    
+    # This value determines the Home Manager release that your configuration is
+    # compatible with. This helps avoid breakage when a new Home Manager release
+    # introduces backwards incompatible changes.
+    stateVersion = "23.11"; # Match this with your NixOS version
+    
+    # Additional packages installed for the user
+    packages = with pkgs; [
+      firefox
+      thunderbird
+      discord
+    ];
+  };
+
+  # Let Home Manager install and manage itself
+  programs.home-manager.enable = true;
+
+  # Properly integrate with flake inputs for Hyprland if available
+  wayland.windowManager.hyprland = lib.mkIf (inputs ? hyprland) {
+    package = inputs.hyprland.packages.${pkgs.system}.hyprland;
+  };
+
+  # Configure Git
+  programs.git = {
+    enable = true;
+    userName = "Your Name";
+    userEmail = "your.email@example.com";
+    extraConfig = {
+      init.defaultBranch = "main";
+    };
+  };
+
+  # Configure bash
+  programs.bash = {
+    enable = true;
+    shellAliases = {
+      ll = "ls -la";
+      update = "sudo nixos-rebuild switch";
+      update-flake = "sudo nixos-rebuild switch --flake /etc/nixos#$(hostname)";
+      update-home = "home-manager switch";
+    };
+  };
+
+  # Configure direnv for per-directory environment variables
+  programs.direnv = {
+    enable = true;
+    nix-direnv.enable = true;
+  };
+}
