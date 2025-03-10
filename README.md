@@ -1,28 +1,92 @@
-# Nixos-Hyprland
+# NixOS Hyprland Configuration
 
-A simple, ready-to-use Hyprland configuration for NixOS with modular components.
+A modular NixOS configuration with Hyprland window manager.
 
-## Quick Install
+## Easy Installation
+
+You can install this configuration with a single command:
 
 ```bash
-# Full installation (system + user, requires sudo)
-curl -sSL https://raw.githubusercontent.com/yourusername/Nixos-Hyprland/main/install.sh | sudo bash
+# Using curl (no GitHub authentication required)
+curl -sSL https://raw.githubusercontent.com/yourusername/Nixos-Hyprland/main/install.sh | bash
 
-# Install only user configurations via home-manager
-curl -sSL https://raw.githubusercontent.com/yourusername/Nixos-Hyprland/main/install.sh | bash --user-only
-
-# Install only system configurations (requires sudo)
-curl -sSL https://raw.githubusercontent.com/yourusername/Nixos-Hyprland/main/install.sh | sudo bash --system-only
-
-# Install specific modules only
-curl -sSL https://raw.githubusercontent.com/yourusername/Nixos-Hyprland/main/install.sh | sudo bash --only desktop-system,apps
-
-# Install everything except gaming components
-curl -sSL https://raw.githubusercontent.com/yourusername/Nixos-Hyprland/main/install.sh | sudo bash --exclude gaming-system,gaming-user
-
-# Use Nix Flakes (recommended for better reproducibility)
-curl -sSL https://raw.githubusercontent.com/yourusername/Nixos-Hyprland/main/install.sh | sudo bash --flakes
+# Or with wget
+wget -qO- https://raw.githubusercontent.com/yourusername/Nixos-Hyprland/main/install.sh | bash
 ```
+
+## Installation Options
+
+The install script provides several options:
+
+```bash
+# Clone and run the installation script
+git clone https://github.com/yourusername/Nixos-Hyprland.git
+cd Nixos-Hyprland
+chmod +x install.sh
+./install.sh [OPTIONS]
+```
+
+### Available Options
+
+- `--user-only`: Install only user configurations via home-manager
+- `--system-only`: Install only system configurations (requires sudo)
+- `--only MODULE1,MODULE2`: Only install specified modules (comma-separated)
+- `--exclude MODULE1,MODULE2`: Exclude specified modules (comma-separated)
+- `--list-modules`: List available modules
+- `--download METHOD`: Download method: git (default), curl, or wget
+- `--flakes`: Use flakes-based configuration
+- `--local PATH`: Use local files instead of cloning repository
+- `--help`: Show the help message
+
+### Avoiding GitHub Login Prompts
+
+If you encounter GitHub authentication prompts when running the script, you have several options:
+
+1. Use the `--download curl` option:
+   ```bash
+   ./install.sh --download curl
+   ```
+
+2. Use the `--download wget` option:
+   ```bash
+   ./install.sh --download wget
+   ```
+
+3. Clone the repository yourself and use the `--local` option:
+   ```bash
+   git clone https://github.com/yourusername/Nixos-Hyprland.git
+   ./install.sh --local ./Nixos-Hyprland
+   ```
+
+4. Store your Git credentials:
+   ```bash
+   git config --global credential.helper store
+   ```
+
+### Basic Usage
+
+By default, the script will prompt you for:
+
+1. Your username
+2. System hostname
+
+These will be used to configure the system. For more advanced configuration, use the options described above.
+
+## What This Installs
+
+This script will:
+
+1. Install NixOS with Hyprland configuration
+2. Set up all necessary components based on selected modules
+3. Apply the configuration
+
+## After Installation
+
+After installation:
+
+1. For system changes: `nixos-rebuild switch`
+2. For user changes: `home-manager switch`
+3. Log out and select Hyprland session to start using your new desktop environment
 
 ## Available Modules
 
