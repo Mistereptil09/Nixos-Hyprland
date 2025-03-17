@@ -11,134 +11,103 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     
-    # Hyprland
+    # Hyprland window manager
     hyprland = {
       url = "github:hyprwm/Hyprland";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    
+    # Additional dependencies
+    nix-colors.url = "github:misterio77/nix-colors"; # Color schemes
+    nixvim = {
+      url = "github:nix-community/nixvim";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, hyprland, ... } @ inputs:
+  outputs = { self, nixpkgs, home-manager, hyprland, nix-colors, nixvim, ... } @ inputs:
     let
       lib = nixpkgs.lib;
+      
+      # System types to support
+      supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
+      
+      # Helper function to generate system configs
+      forAllSystems = lib.genAttrs supportedSystems;
       
       # Function to create a NixOS system configuration
       mkHost = { 
         system ? "x86_64-linux",
         hostname, 
-        username,
-        modules ? [],
-        extraSpecialArgs ? {}
+        username ? "user",
+        modules ? []
       }: lib.nixosSystem {
         inherit system;
         
         specialArgs = { 
-          inherit inputs hostname username;
-        } // extraSpecialArgs;
+          inherit inputs hostname username; 
+          host = hostname; # For backwards compatibility
+        };
         
         modules = [
+          # Configure NIX_PATH and other low-level nix settings 
+          {
+            nix.nixPath = [ "nixpkgs=${nixpkgs}" ];
+            nix.registry.nixpkgs.flake = nixpkgs;
+          }
+          
           # Enable home-manager as a NixOS module
           home-manager.nixosModules.home-manager
           {
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
-              extraSpecialArgs = { 
-                inherit inputs hostname username; 
-              } // extraSpecialArgs;
+              extraSpecialArgs = specialArgs;
+              
+              # Set a default user - can be overridden in host configs
+              users.${username} = {
+                home.stateVersion = "23.11"; # Use appropriate version 
+              };
             };
           }
           
-          # Include common modules
+          # Import common modules
           ./common/modules/theme.nix
           
           # Import common host configuration
           ./hosts/common/default.nix
           
-          # Include user-provided modules
+          # Include host-specific modules
         ] ++ modules;
       };
-      
-      # Supported systems
-      supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
-      
-      # For each system
-      forAllSystems = lib.genAttrs supportedSystems;
-      
     in {
-      # NixOS configurations
       nixosConfigurations = {
-        # Laptop configuration
-        laptop = mkHost {
-          hostname = "nixos-laptop";
-          username = "alice";  # Change this to your username
+        hyprland_laptop = mkHost {
+          hostname = "hyprland-laptop";
+          username = "your-username"; # Replace with your username
           modules = [
-            ./hosts/laptop/default.nix
+            ./hosts/hyprland_laptop/default.nix
           ];
         };
         
-        # Desktop configuration
-        desktop = mkHost {
-          hostname = "nixos-desktop";
-          username = "alice";  # Change this to your username
+        hyprland_desktop = mkHost {
+          hostname = "hyprland-desktop"; 
+          username = "your-username"; # Replace with your username
           modules = [
-            ./hosts/desktop/default.nix
+            ./hosts/hyprland_desktop/default.nix
           ];
         };
       };
       
-      # Standalone home configurations (if needed outside NixOS)
-      homeConfigurations = {
-        "alice@generic" = home-manager.lib.homeManagerConfiguration {
-          pkgs = nixpkgs.legacyPackages.x86_64-linux;
-          extraSpecialArgs = { inherit inputs; };
-          modules = [
-            ./home-manager/profiles/base.nix
-            ./home-manager/profiles/desktop.nix
-            {
-              home = {
-                username = "alice";
-                homeDirectory = "/home/alice";
-                stateVersion = "23.11";
-              };
-            }
-          ];
-        };
-      };
-      
-      # Development shell with helpful utilities
+      # Optional: Development shells or additional outputs
       devShells = forAllSystems (system:
         let pkgs = nixpkgs.legacyPackages.${system};
         in {
           default = pkgs.mkShell {
             buildInputs = with pkgs; [
-              nil # Nix language server
-              nixpkgs-fmt # Nix formatter
-              nix-output-monitor # Better nix build output
-              nix-diff # Compare nix derivations
-              
-              # For testing
-              nixos-generators
+              git
+              nixpkgs-fmt
             ];
-            shellHook = ''
-              echo "NixOS + Hyprland Development Shell"
-              echo ""
-              echo "Available commands:"
-              echo "  rebuild-laptop    - Rebuild and switch to laptop configuration"
-              echo "  rebuild-desktop   - Rebuild and switch to desktop configuration"
-              echo "  build-laptop      - Build laptop configuration without activating"
-              echo "  build-desktop     - Build desktop configuration without activating"
-              echo "  check-laptop      - Check configuration for errors"
-              echo "  check-desktop     - Check configuration for errors"
-              echo ""
-              
-              alias rebuild-laptop="sudo nixos-rebuild switch --flake .#laptop"
-              alias rebuild-desktop="sudo nixos-rebuild switch --flake .#desktop"
-              alias build-laptop="nix build .#nixosConfigurations.laptop.config.system.build.toplevel"
-              alias build-desktop="nix build .#nixosConfigurations.desktop.config.system.build.toplevel"
-              alias check-laptop="nix eval .#nixosConfigurations.laptop.config.system.build.toplevel"
-              alias check-desktop="nix eval .#nixosConfigurations.desktop.config.system.build.toplevel"
-            '';
           };
         }
       );

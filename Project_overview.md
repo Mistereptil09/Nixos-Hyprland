@@ -818,35 +818,124 @@ This architecture shines in multi-host environments where you want consistent co
 ├── flake.nix           # Entry point with system definitions
 ├── flake.lock
 ├── README.md
-├── modules/            # Functionality-based modules
-│   ├── core/           # Core system modules
-│   │   ├── nix.nix
-│   │   ├── boot.nix
-│   │   └── networking.nix
-│   ├── desktop/        # Desktop environment modules
-│   │   ├── hyprland.nix  # Combined system+user hyprland config
-│   │   ├── waybar.nix    # Combined system+user waybar config
-│   │   └── terminal.nix  # Combined system+user terminal config
-│   └── shell/          # Shell modules
-│       ├── zsh.nix
-│       ├── git.nix
-│       └── tmux.nix
-├── nixos/              # NixOS profiles (collections of modules)
-│   └── profiles/
-│       ├── base.nix      # Base NixOS profile
-│       └── desktop.nix   # Desktop NixOS profile
-├── home-manager/       # Home-manager profiles
-│   └── profiles/
-│       ├── base.nix      # Base user profile
-│       └── desktop.nix   # Desktop user profile
+├── modules/       # Functionality-based modules
+│   ├── profiles/       # Meta-modules that enable collections of modules
+│   │   ├── nixos/      # System profile meta-modules
+│   │   │   ├── base.nix      # Base system profile
+│   │   │   └── desktop.nix   # Desktop system profile
+│   │   └── home/       # User profile meta-modules
+│   │       ├── base.nix      # Base user profile
+│   │       └── desktop.nix   # Desktop user profile     
+│   ├── core/           # Core system configuration
+│   │   ├── default.nix # Import point for all core modules
+│   │   ├── nix.nix     # Nix package manager configuration
+│   │   ├── boot.nix    # Boot loader and early system boot settings
+│   │   └── networking.nix # Basic network configuration and settings
+│   ├── shell/          # Shell environment configuration
+│   │   ├── default.nix # Import point for shell modules
+│   │   ├── zsh/        # Z-shell configuration
+│   │   │   ├── default.nix # Options definition and import point
+│   │   │   ├── install.nix # System-level ZSH installation
+│   │   │   └── config.nix  # User dotfiles and ZSH configuration
+│   │   ├── git/        # Git version control
+│   │   │   ├── default.nix # Git module options and imports
+│   │   │   ├── install.nix # System git installation
+│   │   │   └── config.nix  # User-specific git configuration
+│   │   └── tmux/       # Terminal multiplexer
+│   │       ├── default.nix # Tmux module options and imports
+│   │       ├── install.nix # System tmux installation
+│   │       └── config.nix  # User tmux configuration and keybindings
+│   ├── hyprland/       # Hyprland window manager environment
+│   │   ├── default.nix # Main Hyprland environment options
+│   │   ├── install.nix # Core Hyprland system installation
+│   │   ├── config.nix  # Basic Hyprland window manager configuration
+│   │   ├── shortcuts.nix # Hyprland keybindings and shortcuts
+│   │   └── apps/       # Hyprland-specific applications
+│   │       ├── wofi/   # Application launcher for Wayland
+│   │       │   ├── default.nix # Wofi module options
+│   │       │   ├── install.nix # Install wofi launcher
+│   │       │   └── config.nix  # Wofi styling and configuration
+│   │       ├── waybar/ # Status bar for Hyprland
+│   │       │   ├── default.nix # Waybar module options
+│   │       │   ├── install.nix # Install waybar and dependencies
+│   │       │   └── config.nix  # Waybar styling and layout
+│   │       └── terminal/ # Terminal emulator for Hyprland
+│   │           ├── default.nix # Terminal module options
+│   │           ├── install.nix # Install preferred terminal
+│   │           └── config.nix  # Terminal appearance and behavior
+│   ├── development/    # Development tools and environments
+│   │   ├── default.nix # Common development options
+│   │   ├── virtualization/ # Virtualization and containers
+│   │   │   ├── default.nix # Virtualization module options
+│   │   │   ├── docker.nix  # Docker container engine
+│   │   │   ├── podman.nix  # Podman container engine
+│   │   │   └── kvm.nix     # KVM/QEMU virtual machines
+│   │   ├── languages/  # Programming language environments
+│   │   │   ├── default.nix # Language environment options
+│   │   │   ├── python.nix  # Python development environment
+│   │   │   ├── rust.nix    # Rust development environment
+│   │   │   ├── node.nix    # Node.js/JavaScript environment
+│   │   │   └── go.nix      # Go development environment
+│   │   ├── editors/    # Code editors and IDEs
+│   │   │   ├── default.nix # Editors common settings
+│   │   │   ├── vscode/     # Visual Studio Code
+│   │   │   │   ├── default.nix # VS Code options
+│   │   │   │   ├── install.nix # VS Code installation
+│   │   │   │   └── config.nix  # VS Code settings and extensions
+│   │   │   └── neovim/     # Neovim editor
+│   │   │       ├── default.nix # Neovim options
+│   │   │       ├── install.nix # Neovim installation
+│   │   │       └── config.nix  # Neovim configuration and plugins
+│   │   └── tools/      # Development tools
+│   │       ├── default.nix # Development tools options
+│   │       ├── devops.nix  # DevOps tools (terraform, etc)
+│   │       └── api.nix     # API development tools (Postman, Insomnia)
+│   ├── multimedia/     # Media creation and consumption
+│   │   ├── default.nix # Multimedia module options
+│   │   ├── image.nix   # Image editing tools (GIMP, etc)
+│   │   ├── video.nix   # Video tools (VLC, Kdenlive, etc)
+│   │   ├── audio.nix   # Audio tools (Audacity, etc)
+│   │   └── streaming.nix # Streaming tools (OBS, etc)
+│   ├── productivity/   # Work and productivity applications
+│   │   ├── default.nix # Productivity module options
+│   │   ├── office.nix  # Office suites (LibreOffice, OnlyOffice)
+│   │   └── research.nix # Research tools (Zotero, etc)
+│   ├── utilities/      # System utilities
+│   │   ├── default.nix # Import point for utilities
+│   │   ├── backups/    # Backup solutions
+│   │   │   ├── default.nix # Backup module options
+│   │   │   ├── install.nix # Backup tools installation
+│   │   │   └── config.nix  # Backup configuration
+│   │   ├── screenshots/ # Screen capture utilities
+│   │   │   ├── default.nix # Screenshot module options
+│   │   │   ├── install.nix # Install screenshot tools
+│   │   │   └── config.nix  # Configure screenshot behavior
+│   │   ├── system.nix  # System maintenance tools (bleachbit, etc)
+│   │   └── file-management.nix # File managers and utilities
+│   ├── networking/     # Advanced networking modules
+│   │   ├── default.nix # Networking module options
+│   │   ├── vpn.nix     # VPN clients (Wireguard, OpenVPN)
+│   │   └── analysis.nix # Network analysis (Wireshark, etc)
+│   ├── security/       # Security applications
+│   │   ├── default.nix # Security module options
+│   │   ├── passwords.nix # Password managers (KeePassXC, etc)
+│   │   └── scanning.nix  # Security scanning tools (ClamAV, etc)
+│   ├── communication/  # Communication tools
+│   │   ├── default.nix # Communication module options
+│   │   ├── messaging.nix # Messaging apps (Signal, Element, etc)
+│   │   └── conferencing.nix # Video conferencing (Zoom, etc)
+│   └── gaming/         # Gaming applications
+│       ├── default.nix # Gaming module options
+│       ├── steam.nix   # Steam and native games
+│       └── emulation.nix # Game emulation (Wine, Lutris, etc)
 ├── hosts/              # Host-specific configurations
 │   ├── common/         # Common host settings
 │   │   └── default.nix
-│   ├── laptop/         # Laptop configuration
+│   ├── hyprland_laptop/         # Laptop configuration
 │   │   ├── default.nix   # Main configuration
 │   │   ├── hardware.nix  # Hardware-specific configuration
 │   │   └── home.nix      # Host-specific home-manager config
-│   └── desktop/        # Desktop configuration
+│   └── hyprland_desktop/        # Desktop configuration
 │       ├── default.nix
 │       ├── hardware.nix
 │       └── home.nix
@@ -858,8 +947,166 @@ This architecture shines in multi-host environments where you want consistent co
 └── assets/             # Assets like wallpapers
     └── wallpapers/
         └── default.png
+```
+
+### Tier 1: Simple One-files Modules
+**For simple modules**
+```sh
+common/             # Common utilities and theme
+├── modules/
+│   └── theme.nix     # Central theming module
+└── lib/
+```
+
+- Don't require complex installation steps
+- Have minimal user-facing configuration
+
+**Example structure:**
+```nix
+# Single file module: modules/core/networking.nix
+{ config, lib, pkgs, ... }:
+
+  options.modules.core.networking = {
+    enable = lib.mkEnableOption "Enable networking configuration";
+    hostName = lib.mkOption {
+      type = lib.types.str;
+      default = "nixos";
+      description = "Machine hostname";
+    };
+  };
+
+  config = lib.mkIf cfg.enable {
+    networking = {
+      hostName = cfg.hostName;
+      networkmanager.enable = true;
+    };
+  };
+}
+```
+
+### Tier 2: Medium Complexity Modules
+**For modules with moderate configuration needs**
+
+```sh
+modules/shell/zsh/
+├── default.nix    # Main entry point with options
+├── install.nix    # Package installation
+└── config.nix     # Configuration
+```
+
+Medium complexity modules split functionality into multiple files when they:
+- Have many configuration options
+- Need to install multiple packages
+- Configure multiple aspects of a system
+- Generate complex configuration files
+
+**Example structure:**
+```nix
+# Entry point: modules/shell/zsh/default.nix
+{ config, lib, pkgs, ... }:
+
+{
+  imports = [
+    ./install.nix
+    ./config.nix
+  ];
+
+  options.modules.shell.zsh = {
+    enable = lib.mkEnableOption "Enable Zsh shell";
+    defaultPrompt = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Use the default prompt configuration";
+    };
+  };
+}
+
+# Installation: modules/shell/zsh/install.nix
+{ config, lib, pkgs, ... }:
+
+let
+  cfg = config.modules.shell.zsh;
+in {
+  config = lib.mkIf cfg.enable {
+    programs.zsh.enable = true;
+    environment.systemPackages = with pkgs; [
+      zsh-syntax-highlighting
+      zsh-autosuggestions
+    ];
+    users.defaultUserShell = pkgs.zsh;
+  };
+}
+
+# Configuration: modules/shell/zsh/config.nix
+{ config, lib, ... }:
+
+let
+  cfg = config.modules.shell.zsh;
+in {
+  config = lib.mkIf cfg.enable {
+    home-manager.users.${config.user.name} = { ... }: {
+      programs.zsh = {
+        enable = true;
+        autocd = true;
+        enableAutosuggestions = true;
+        enableSyntaxHighlighting = true;
+        # ... other config options
+      };
+    };
+  };
+}
+```
+
+### Tier 3: Complex Modules with Submodules
+**For core environment modules with many components**
 
 ```
+modules/hyprland/
+├── default.nix    # Main entry point
+├── install.nix    # Core package installation
+├── config.nix     # Core configuration
+├── shortcuts.nix  # Key bindings
+└── apps/          # Related applications
+    ├── wofi/
+    ├── waybar/
+    └── terminal/
+```
+
+Complex modules use a multi-level structure when they:
+- Configure an entire environment with multiple related applications
+- Handle complex interactions between components
+- Need specialized configuration files for different aspects
+- Manage submodules that can be enabled/disabled independently
+
+**Example structure:**
+```nix
+# Main entry point: modules/hyprland/default.nix
+{ config, lib, ... }:
+
+{
+  imports = [
+    ./install.nix
+    ./config.nix
+    ./shortcuts.nix
+    ./apps/wofi
+    ./apps/waybar
+    ./apps/terminal
+  ];
+  
+  options.modules.hyprland = {
+    enable = lib.mkEnableOption "Enable Hyprland desktop environment";
+    
+    # Global options affecting multiple submodules
+    theme = lib.mkOption {
+      type = lib.types.enum [ "dark" "light" ];
+      default = "dark";
+      description = "Theme to use across Hyprland components";
+    };
+  };
+}
+```
+
+This tiered approach balances simplicity and organization, using the appropriate structure based on the complexity of each module.
 
 ## Profile Management
 
