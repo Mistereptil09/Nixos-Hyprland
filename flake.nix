@@ -65,7 +65,11 @@
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
-              extraSpecialArgs = specialArgs;
+              # Fix: Use the specialArgs from parent scope
+              extraSpecialArgs = { 
+                inherit inputs hostname username; 
+                host = hostname;
+              };
               
               # Set a default user - can be overridden in host configs
               users.${username} = {
