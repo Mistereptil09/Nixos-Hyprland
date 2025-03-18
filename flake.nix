@@ -90,7 +90,7 @@
     in {
       nixosConfigurations = {
         hyprland_laptop = mkHost {
-          hostname = "NixFox"; # changed from hyprland-laptop 
+          hostname = "NixFox"; 
           # No need to specify username, will use defaultUser
           modules = [
             ./hosts/hyprland_laptop/default.nix
@@ -98,18 +98,19 @@
         };
         
         hyprland_desktop = mkHost {
-          hostname = "hyprland-desktop"; # changed from hyprland-desktop
+          hostname = "hyprland-desktop";
           # No need to specify username, will use defaultUser
           modules = [
             ./hosts/hyprland_desktop/default.nix
           ];
         };
         
-        laptop-host = mkHost {  # Adding the laptop-host configuration
+        # Renamed from laptop-host to host-laptop to match what's being requested
+        host-laptop = mkHost {
           hostname = "nixos-laptop";
           # Uses defaultUser="antonio"  
           modules = [
-            ./hosts/laptop-host/default.nix
+            ./hosts/host-laptop/default.nix  # Path updated to match the new name
           ];
         };
         
