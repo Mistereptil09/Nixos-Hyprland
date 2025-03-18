@@ -16,18 +16,38 @@
   user.description = "NixOS User";
   
   # Configure hardware
-  modules.core.hardware = {
-    # CPU - uncomment based on your hardware
-    cpu = {
-      intel.enable = true;
-      # amd.enable = true;
+  modules.core = {
+    # France-specific settings
+    system = {
+      time.timeZone = "Europe/Paris";
+      console.keyMap = "fr";
+      locale = {
+        defaultLocale = "fr_FR.UTF-8";
+        extraLocales = [ "en_US.UTF-8" ];
+      };
+    };
+
+    # Set French keyboard layout
+    hardware.peripherals.keyboard = {
+      setXkbOptions = true;
+      xkbLayout = "fr";
+      xkbVariant = "";
+      xkbOptions = "eurosign:e";
     };
     
-    # GPU - uncomment based on your hardware
-    gpu = {
-      intel.enable = true;
-      # amd.enable = true;
-      # nvidia.enable = true;
+    hardware = {
+      # CPU - uncomment based on your hardware
+      cpu = {
+        intel.enable = true;
+        # amd.enable = true;
+      };
+      
+      # GPU - uncomment based on your hardware
+      gpu = {
+        intel.enable = true;
+        # amd.enable = true;
+        # nvidia.enable = true;
+      };
     };
   };
   
@@ -121,6 +141,11 @@
     networkmanager.enable = true;
     wireless.iwd.enable = true;
     networkmanager.wifi.backend = "iwd";
+    
+    # Add hosts entries for common French websites if desired
+    # hosts = {
+    #   "51.91.236.255" = [ "laposte.fr" ];
+    # };
   };
   
   # Any other laptop-specific settings
@@ -128,5 +153,8 @@
     # Enable auto-suspend
     logind.lidSwitch = "suspend";
     thermald.enable = true; # CPU temperature management
+    
+    # Fix for French timezone in Windows dual boot (if applicable)
+    time.hardwareClockInLocalTime = true;
   };
 }

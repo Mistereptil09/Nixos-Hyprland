@@ -13,7 +13,15 @@
   # Override specific settings for this host
   modules = {
     core = {
-      system.time.timeZone = "France/Paris"; # Set your timezone
+      system = {
+        time.timeZone = "Europe/Paris"; # Corrected from "France/Paris"
+        locale = {
+          defaultLocale = "fr_FR.UTF-8";
+          extraLocales = [ "en_US.UTF-8" ];
+        };
+      };
+
+      # Set French keyboard layout
       hardware = {
         enable = true;
         cpu.intel.enable = true;
@@ -21,7 +29,15 @@
         audio.enable = true;
         bluetooth.enable = true;
         opengl.enable = true;
-        peripherals.touchpad.enable = false;
+        peripherals = {
+          touchpad.enable = false;
+          keyboard = {
+            setXkbOptions = true;
+            xkbLayout = "fr";
+            xkbVariant = "";
+            xkbOptions = "eurosign:e";
+          };
+        };
       };
     };
     

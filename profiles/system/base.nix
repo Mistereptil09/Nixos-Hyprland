@@ -22,8 +22,13 @@
       system = {
         enable = true;
         stateVersion = "23.11";
-        time.timeZone = lib.mkDefault "UTC";
+        time.timeZone = lib.mkDefault "Europe/Paris"; # Changed from UTC to Paris
         fonts.enable = true;
+        # Added locale settings for France
+        locale = {
+          defaultLocale = lib.mkDefault "fr_FR.UTF-8";
+          extraLocales = lib.mkDefault [ "en_US.UTF-8" ];
+        };
         packages = {
           base = lib.mkDefault (with pkgs; [
             coreutils curl wget git vim htop
