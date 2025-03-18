@@ -29,6 +29,9 @@
     let
       lib = nixpkgs.lib;
       
+      # Define default username once here
+      defaultUser = "antonio";
+      
       # System types to support
       supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
       
@@ -39,7 +42,7 @@
       mkHost = { 
         system ? "x86_64-linux",
         hostname, 
-        username ? "user",
+        username ? defaultUser,
         modules ? []
       }: lib.nixosSystem {
         inherit system;
@@ -83,18 +86,35 @@
     in {
       nixosConfigurations = {
         hyprland_laptop = mkHost {
-          hostname = "hyprland-laptop";
-          username = "your-username"; # Replace with your username
+          hostname = "NixFox"; # changed from hyprland-laptop 
+          # No need to specify username, will use defaultUser
           modules = [
             ./hosts/hyprland_laptop/default.nix
           ];
         };
         
         hyprland_desktop = mkHost {
-          hostname = "hyprland-desktop"; 
-          username = "your-username"; # Replace with your username
+          hostname = "hyprland-desktop"; # changed from hyprland-desktop
+          # No need to specify username, will use defaultUser
           modules = [
             ./hosts/hyprland_desktop/default.nix
+          ];
+        };
+        
+        laptop-host = mkHost {  # Adding the laptop-host configuration
+          hostname = "nixos-laptop";
+          # Uses defaultUser="antonio"  
+          modules = [
+            ./hosts/laptop-host/default.nix
+          ];
+        };
+        
+        # Example of overriding the default username for a specific host
+        custom_host = mkHost {
+          hostname = "custom-host";
+          username = "different-user";
+          modules = [
+            ./hosts/custom_host/default.nix
           ];
         };
       };

@@ -1,4 +1,4 @@
-{ config, lib, pkgs, username ? "yourusername", ... }:
+{ config, lib, pkgs, username, ... }:
 
 {
   imports = [
@@ -10,9 +10,9 @@
     ../../profiles/system/desktop-hyprland.nix
   ];
   
-  # Define hostname and username
+  # Define hostname and username (used from the flake parameter)
   networking.hostName = "nixos-laptop";
-  user.name = username;
+  user.name = username; # This will use the username from flake.nix
   user.description = "NixOS User";
   
   # Configure hardware
