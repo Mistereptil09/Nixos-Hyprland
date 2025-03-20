@@ -38,12 +38,17 @@
       # Helper function to generate system configs
       forAllSystems = lib.genAttrs supportedSystems;
       
+      # Import all modules
+      nixosModules = import ./modules/nixos;
+      homeModules = import ./modules/home;
+      
       # Function to create a NixOS system configuration
       mkHost = { 
         system ? "x86_64-linux",
         hostname, 
         username ? defaultUser,
-        modules ? []
+        profile ? "desktop", # default profile
+        extraModules ? []
       }: lib.nixosSystem {
         inherit system;
         
@@ -53,74 +58,82 @@
         };
         
         modules = [
-          # Configure NIX_PATH and other low-level nix settings 
+          # Basic Nix configuration
           {
-            nix.nixPath = [ "nixpkgs=${nixpkgs}" ];
-            nix.registry.nixpkgs.flake = nixpkgs;
+            nix = {
+              nixPath = [ "nixpkgs=${nixpkgs}" ];
+              registry.nixpkgs.flake = nixpkgs;
+              settings = {
+                experimental-features = [ "nix-command" "flakes" ];
+                auto-optimise-store = true;
+              };
+            };
           }
           
-          # Enable home-manager as a NixOS module
+          # Import system profile
+          ./profiles/${profile}.nix
+          
+          # Host-specific configuration
+          ./hosts/${hostname}
+          
+          # Home manager configuration
           home-manager.nixosModules.home-manager
           {
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
-              # Fix: Use the specialArgs from parent scope
               extraSpecialArgs = { 
                 inherit inputs hostname username; 
                 host = hostname;
               };
               
-              # Set a default user - can be overridden in host configs
-              users.${username} = {
-                home.stateVersion = "23.11"; # Use appropriate version 
-              };
+              # Import user home-manager configuration
+              users.${username} = import ./home/${username};
             };
           }
-          
-          # Import common modules
-          ./common/modules/theme.nix
-          
-          # Import common host configuration
-          ./hosts/common/default.nix
-          
-          # Include host-specific modules
-        ] ++ modules;
+        ] ++ extraModules;
       };
     in {
+      # Export NixOS modules for reuse
+      inherit nixosModules;
+      inherit homeModules;
+      
+      # NixOS configurations
       nixosConfigurations = {
-        hyprland_laptop = mkHost {
-          hostname = "NixFox"; 
-          # No need to specify username, will use defaultUser
-          modules = [
-            ./hosts/hyprland_laptop/default.nix
+        # Laptop with Hyprland
+        NixFox = mkHost {
+          hostname = "NixFox";
+          profile = "desktop";
+          extraModules = [
+            nixosModules.hyprland
+            nixosModules.laptop
           ];
         };
         
-        hyprland_desktop = mkHost {
+        # Desktop with Hyprland
+        hyprland-desktop = mkHost {
           hostname = "hyprland-desktop";
-          # No need to specify username, will use defaultUser
-          modules = [
-            ./hosts/hyprland_desktop/default.nix
+          profile = "desktop";
+          extraModules = [
+            nixosModules.hyprland
+            nixosModules.desktop
           ];
         };
         
-        # Renamed from laptop-host to host-laptop to match what's being requested
-        host-laptop = mkHost {
+        # Simple host-laptop configuration
+        nixos-laptop = mkHost {
           hostname = "nixos-laptop";
-          # Uses defaultUser="antonio"  
-          modules = [
-            ./hosts/host-laptop/default.nix  # Path updated to match the new name
+          profile = "minimal";
+          extraModules = [
+            nixosModules.laptop
           ];
         };
         
-        # Example of overriding the default username for a specific host
-        custom_host = mkHost {
+        # Example with different user
+        custom-host = mkHost {
           hostname = "custom-host";
           username = "different-user";
-          modules = [
-            ./hosts/custom_host/default.nix
-          ];
+          profile = "minimal";
         };
       };
       
