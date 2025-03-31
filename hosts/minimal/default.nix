@@ -1,10 +1,10 @@
-{ config, lib, pkgs, nixosProfiles, ... }:
+{ lib, pkgs, ... }:
 
 {
   # Explicitly import profiles right in the host file
   imports = [
     # Import the minimal system profile
-    nixosProfiles.minimal
+    ../../modules/core/boot
     
     # You could add other profiles directly
     # nixosProfiles.base
@@ -25,10 +25,5 @@
   # Customize minimal installation if needed
   services = {
     # Add any host-specific services
-  };
-
-  # Host-specific module customization
-  modules = {
-    # Enable/disable specific modules as needed
   };
 }

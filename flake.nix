@@ -10,7 +10,7 @@
     hyprland.url = "github:hyprwm/Hyprland";
   };
 
-  outputs = { self, nixpkgs, home-manager, hyprland, ... } @ inputs:
+  outputs = { self, nixpkgs, ... } @ inputs:
     let
       lib = nixpkgs.lib;
       system = "x86_64-linux";
@@ -32,8 +32,16 @@
       homeProfiles = profiles.homeProfiles;
       
       # Host configurations
-      nixosConfigurations = hosts.hosts // {
-        # Default host
+      nixosConfigurations = {
+        minimal = nixpkgs.lib.nixosSystem {
+          # Adjust the system as needed for your hardware
+          system = "x86_64-linux"; 
+          specialArgs = { inherit inputs; };
+          modules = [
+            ./hosts/minimal
+            # Other modules you might need
+          ];
+        };
         nixos = hosts.hosts.minimal;
       };
     };
