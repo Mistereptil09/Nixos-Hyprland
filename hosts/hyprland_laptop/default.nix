@@ -1,4 +1,4 @@
-{ config, lib, pkgs, profiles, ... }:
+{ config, lib, pkgs, profiles, currentUsername, ... }:
 
 {
   # Host-specific configuration
@@ -12,6 +12,6 @@
     # Add any packages specific to this host
   ];
   
-  # Set user-specific hardware access
-  users.users.antonio.extraGroups = [ "input" ];
+  # Set user-specific hardware access - use the dynamic username
+  users.users.${currentUsername}.extraGroups = [ "input" ];
 }

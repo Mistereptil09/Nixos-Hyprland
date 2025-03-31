@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, currentUsername ? "antonio", ... }:
 
 {
   # Import common modules
@@ -10,7 +10,7 @@
   options.user = {
     name = lib.mkOption {
       type = lib.types.str;
-      default = "antonio";
+      default = currentUsername;
       description = "Primary user name";
     };
     

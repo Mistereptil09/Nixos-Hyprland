@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, currentUsername ? "antonio", ... }:
 
 let
   cfg = config.modules.hyprland;
@@ -6,7 +6,7 @@ in
 {
   config = lib.mkIf cfg.enable {
     # Base Hyprland configuration for home-manager
-    home-manager.users.antonio = {
+    home-manager.users.${currentUsername} = {
       wayland.windowManager.hyprland = {
         enable = true;
         systemd.enable = true;

@@ -18,7 +18,8 @@
   
   # Sound
   sound.enable = true;
-  hardware.pulseaudio.enable = true;
+  # Don't directly enable pulseaudio as we use pipewire in desktop profile
+  # hardware.pulseaudio.enable = true; <- removing this
   
   # Create any directories needed for your configuration
   system.activationScripts.makeDirs = {

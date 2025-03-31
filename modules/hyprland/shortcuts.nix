@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, currentUsername ? "antonio", ... }:
 
 let
   cfg = config.modules.hyprland;
@@ -16,7 +16,7 @@ in
 {
   config = lib.mkIf cfg.enable {
     # Add our shortcut configuration to the main Hyprland configuration
-    home-manager.users.antonio = {
+    home-manager.users.${currentUsername} = {
       wayland.windowManager.hyprland.extraConfig = ''
         # Keyboard shortcuts
 

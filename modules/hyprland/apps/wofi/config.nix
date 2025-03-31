@@ -1,11 +1,11 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, currentUsername ? "antonio", ... }:
 
 let
   cfg = config.modules.hyprland;
 in
 {
   config = lib.mkIf cfg.enable {
-    home-manager.users.antonio = {
+    home-manager.users.${currentUsername} = {
       # Wofi configuration
       home.file.".config/wofi/style.css".text = ''
         window {

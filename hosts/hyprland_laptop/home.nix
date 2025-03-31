@@ -1,4 +1,4 @@
-{ config, lib, pkgs, profiles, ... }:
+{ config, lib, pkgs, profiles, username, ... }:
 
 {
   # Import base home profile
@@ -6,6 +6,10 @@
     base
     hyprland
   ];
+  
+  # Required for home-manager - use the passed username
+  home.username = username;
+  home.homeDirectory = "/home/${username}";
   
   # Host-specific home configuration
   wayland.windowManager.hyprland.settings = {
