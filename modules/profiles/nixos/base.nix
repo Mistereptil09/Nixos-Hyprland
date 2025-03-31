@@ -3,7 +3,6 @@
 {
   # Import common modules
   imports = [
-    ../../../modules/core
     ../../core
   ];
   
@@ -11,6 +10,7 @@
   options.user = {
     name = lib.mkOption {
       type = lib.types.str;
+      default = "antonio";
       description = "Primary user name";
     };
     
@@ -23,18 +23,15 @@
   
   # Base system configuration
   config = {
-    # Enable base modules
-    modules.core = {
-      nix.enable = true;
-      boot.enable = true;
-      networking.enable = true;
-    };
+    # Enable core module
+    modules.core.enable = true;
     
     # Create user
     users.users.${config.user.name} = {
       isNormalUser = true;
       description = config.user.description;
       extraGroups = [ "wheel" "networkmanager" "video" "audio" ];
+      initialPassword = "changeme";
     };
     
     # Basic packages that should be available everywhere
@@ -51,13 +48,6 @@
     # Time and locale settings
     time.timeZone = lib.mkDefault "UTC";
     i18n.defaultLocale = lib.mkDefault "en_US.UTF-8";
-    
-    # Default user
-    users.users.antonio = {
-      isNormalUser = true;
-      extraGroups = [ "wheel" "networkmanager" "video" "audio" ];
-      initialPassword = "changeme";
-    };
     
     # Sudo settings
     security.sudo.wheelNeedsPassword = false;
