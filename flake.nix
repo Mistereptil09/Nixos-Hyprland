@@ -15,17 +15,23 @@
       lib = nixpkgs.lib;
       system = "x86_64-linux";
       
+      # Get current user information
+      username = builtins.getEnv "USER";
+      # Default to "antonio" if USER env var is empty (e.g., when run with sudo)
+      defaultUser = if username != "" then username else "antonio";
+      
       # Import helper functions
       helpers = import ./common/lib/helpers.nix { inherit lib; };
       
       # Function to create a host configuration
-      mkHost = { hostname, profiles ? [], homeProfiles ? [] }: 
+      mkHost = { hostname, profiles ? [], homeProfiles ? [], username ? defaultUser }: 
         nixpkgs.lib.nixosSystem {
           inherit system;
           specialArgs = { 
             inherit inputs system lib;
             profiles = self.nixosProfiles;
             homeProfiles = self.homeProfiles;
+            currentUsername = username;
           };
           modules = [
             # Import hardware configuration
@@ -41,8 +47,9 @@
               home-manager.extraSpecialArgs = {
                 inherit inputs system; 
                 profiles = self.homeProfiles;
+                username = username;
               };
-              home-manager.users.antonio = import ./hosts/${hostname}/home.nix;
+              home-manager.users.${username} = import ./hosts/${hostname}/home.nix;
             }
             
             # Import all requested system profiles
@@ -74,6 +81,13 @@
           hostname = "hyprland_desktop";
           profiles = [ "base" "desktop" "workstation" ];
           homeProfiles = [ "base" "hyprland" "development" ];
+        };
+        
+        # New minimal configuration
+        minimal = mkHost {
+          hostname = "minimal";
+          profiles = [ "minimal" ];
+          homeProfiles = [ "minimal" ];
         };
         
         # Legacy/default host (for backward compatibility)
