@@ -1,5 +1,5 @@
 {
-  description = "Minimal NixOS + Hyprland Configuration";
+  description = "NixOS configuration with Hyprland";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -15,40 +15,39 @@
       lib = nixpkgs.lib;
       system = "x86_64-linux";
       
-      # Function to create a NixOS system configuration
-      mkHost = { 
-        hostname, 
-        username ? "user",
-        modules ? [] 
-      }: lib.nixosSystem {
+      # Function to create a host configuration
+      mkHost = hostname: nixpkgs.lib.nixosSystem {
         inherit system;
-        
-        specialArgs = { 
-          inherit inputs hostname username; 
-        };
-        
+        specialArgs = { inherit inputs; };
         modules = [
-          # Enable home-manager as a NixOS module
-          home-manager.nixosModules.home-manager
-          {
+          home-manager.nixosModules.home-manager {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
           }
           
-          # Import common configuration
-          ./hosts/common/default.nix
-          
-          # Include user-provided modules
-        ] ++ modules;
+          # Host-specific configuration
+          ./hosts/${hostname}
+        ];
       };
-    in {
+    in
+    {
       nixosConfigurations = {
-        # Minimal configuration
-        minimal = mkHost {
-          hostname = "nixos-minimal";
-          username = "user";
+        # Define your hosts here
+        hyprland_minimal = mkHost "laptop";
+        # Add more hosts as needed
+        # desktop = mkHost "desktop";
+        # server = mkHost "server";
+        
+        # Backwards compatibility for the old approach
+        default = nixpkgs.lib.nixosSystem {
+          inherit system;
+          specialArgs = { inherit inputs; };
           modules = [
-            ./hosts/hyprland_minimal/default.nix
+            home-manager.nixosModules.home-manager {
+              home-manager.useGlobalPkgs = true;
+              home-manager.useUserPackages = true;
+            }
+            ./hosts/common/default.nix
           ];
         };
       };
