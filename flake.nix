@@ -18,38 +18,44 @@
       # Function to create a host configuration
       mkHost = hostname: nixpkgs.lib.nixosSystem {
         inherit system;
-        specialArgs = { inherit inputs; };
+        specialArgs = { 
+          inherit inputs; 
+          # Pass current hostname to the configuration
+          currentHostname = hostname;
+        };
         modules = [
+          # Import your common configuration first
+          ./hosts/common
+          
+          # Then import host-specific configuration
+          ./hosts/${hostname}
+          
+          # Add home-manager module
           home-manager.nixosModules.home-manager {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
           }
           
-          # Host-specific configuration
-          ./hosts/${hostname}
+          # Add hyprland module
+          hyprland.nixosModules.default
         ];
       };
     in
     {
       nixosConfigurations = {
-        # Define your hosts here
+        # Define your specific hosts
         hyprland_minimal = mkHost "laptop";
+        
+        # This one matches your current hostname for `nixos-rebuild switch` without arguments
+        # Replace "nixos" with your actual hostname from `hostname` command if different
+        nixos = mkHost "laptop";  
+        
+        # Create an alias for 'laptop' to directly match the directory name
+        laptop = mkHost "laptop";
+        
         # Add more hosts as needed
         # desktop = mkHost "desktop";
         # server = mkHost "server";
-        
-        # Backwards compatibility for the old approach
-        default = nixpkgs.lib.nixosSystem {
-          inherit system;
-          specialArgs = { inherit inputs; };
-          modules = [
-            home-manager.nixosModules.home-manager {
-              home-manager.useGlobalPkgs = true;
-              home-manager.useUserPackages = true;
-            }
-            ./hosts/common/default.nix
-          ];
-        };
       };
     };
 }

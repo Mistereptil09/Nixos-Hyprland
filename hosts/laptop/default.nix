@@ -1,4 +1,4 @@
-{ config, pkgs, inputs, lib, ... }:
+{ config, pkgs, inputs, lib, currentHostname ? "laptop", ... }:
 
 let
   hardwareFile = ./hardware-configuration.nix;
@@ -6,25 +6,23 @@ let
 in
 {
   imports = [
-    # Other modules
-    ../../modules/system 
+    # Only import hardware-configuration if it exists
+    ../common/system
   ] ++ lib.optional hardwareExists hardwareFile;
 
-  # Check for hardware configuration file and throw helpful error if missing
+  # Fail with a clear error message if hardware-configuration.nix doesn't exist
   assertions = [{
     assertion = hardwareExists;
     message = ''
-      ERROR: No hardware-configuration.nix found for the laptop host.
+      ERROR: No hardware-configuration.nix found for the ${currentHostname} host.
       
-      Please create this file by either:
+      Please create this file at:
+      ${toString hardwareFile}
       
-      1. Boot from a NixOS installation media and run:
-         $ sudo nixos-generate-config --root /mnt
-         Then copy the generated hardware-configuration.nix to:
-         ${toString ./hardware-configuration.nix}
-         
-      2. Or manually create a basic hardware configuration file at:
-         ${toString ./hardware-configuration.nix}
+      You can generate it by booting from NixOS installation media and running:
+      $ sudo nixos-generate-config --root /mnt
+      
+      Then copy the generated hardware-configuration.nix to the location above.
     '';
   }];
 
@@ -33,11 +31,5 @@ in
   
   # Laptop-specific hardware settings
   services.tlp.enable = true;  # Power management
-  
-  # Basic hardware fallbacks - these will be used only if the assertion is removed
-  # and no hardware-configuration.nix exists
-  boot.loader = lib.mkDefault {
-    systemd-boot.enable = true;
-    efi.canTouchEfiVariables = true;
-  };
 }
+
