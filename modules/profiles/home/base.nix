@@ -1,6 +1,11 @@
 { config, lib, pkgs, ... }:
 
 {
+  imports = [
+    ../../shell/zsh/config.nix
+    ../../shell/git/config.nix
+  ];
+  
   # Base user configuration
   config = {
     # Common home-manager settings
@@ -16,13 +21,21 @@
         ripgrep
         fd
         bat
-        htop
+        exa
+        fzf
       ];
     };
     
     # Standard programs configuration 
     programs = {
       home-manager.enable = true;
+      alacritty = {
+        enable = true;
+        settings = {
+          window.opacity = 0.95;
+          font.size = 11;
+        };
+      };
     };
   };
 }

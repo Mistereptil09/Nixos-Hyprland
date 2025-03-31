@@ -9,21 +9,50 @@ in {
   ];
 
   config = lib.mkIf cfg.enable {
-    # System-level configuration
+    # Enable hyprland
     programs.hyprland = {
       enable = true;
-      xwayland.enable = true;
+      package = inputs.hyprland.packages.${pkgs.system}.hyprland;
     };
     
-    environment.systemPackages = with pkgs; [
-      hyprpaper
-      wl-clipboard
-      kitty
-    ];
-    
+    # Enable XDG portal
     xdg.portal = {
       enable = true;
-      extraPortals = [ pkgs.xdg-desktop-portal-hyprland ];
+      extraPortals = with pkgs; [
+        xdg-desktop-portal-hyprland
+        xdg-desktop-portal-gtk
+      ];
     };
+    
+    # System packages needed for Hyprland
+    environment.systemPackages = with pkgs; [
+      waybar
+      dunst
+      libnotify
+      swww
+      wl-clipboard
+      grim
+      slurp
+      wofi
+      libsForQt5.polkit-kde-agent
+    ];
+    
+    # Enable sound
+    sound.enable = true;
+    hardware.pulseaudio.enable = lib.mkDefault true;
+    
+    # Enable Bluetooth
+    hardware.bluetooth.enable = true;
+    services.blueman.enable = true;
+    
+    # Enable fonts
+    fonts.packages = with pkgs; [
+      noto-fonts
+      noto-fonts-emoji
+      font-awesome
+      liberation_ttf
+      fira-code
+      fira-code-symbols
+    ];
   };
 }

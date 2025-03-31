@@ -15,41 +15,69 @@
       lib = nixpkgs.lib;
       system = "x86_64-linux";
       
+      # Import helper functions
+      helpers = import ./common/lib/helpers.nix { inherit lib; };
+      
       # Function to create a host configuration
-      mkHost = hostname: nixpkgs.lib.nixosSystem {
-        inherit system;
-        specialArgs = { 
-          inherit inputs; 
-          currentHostname = hostname;
+      mkHost = { hostname, profiles ? [], homeProfiles ? [] }: 
+        nixpkgs.lib.nixosSystem {
+          inherit system;
+          specialArgs = { 
+            inherit inputs system lib;
+            profiles = self.nixosProfiles;
+            homeProfiles = self.homeProfiles;
+          };
+          modules = [
+            # Import hardware configuration
+            ./hosts/${hostname}/hardware.nix
+            
+            # Import the host's main configuration
+            ./hosts/${hostname}/default.nix
+            
+            # Add home-manager module
+            home-manager.nixosModules.home-manager {
+              home-manager.useGlobalPkgs = true;
+              home-manager.useUserPackages = true;
+              home-manager.extraSpecialArgs = {
+                inherit inputs system; 
+                profiles = self.homeProfiles;
+              };
+              home-manager.users.antonio = import ./hosts/${hostname}/home.nix;
+            }
+            
+            # Import all requested system profiles
+            ({...}: { imports = map (profile: self.nixosProfiles.${profile}) profiles; })
+          ];
         };
-        modules = [
-          # Import your common configuration first
-          ./hosts/common
-          
-          # Then import host-specific configuration
-          ./hosts/${hostname}
-          
-          # Add home-manager module
-          home-manager.nixosModules.home-manager {
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-          }
-          
-          # Add hyprland module
-          hyprland.nixosModules.default
-        ];
-      };
     in
     {
+      # NixOS system profiles
+      nixosProfiles = helpers.importDirToAttrs ./modules/profiles/nixos;
+      
+      # Home-manager user profiles
+      homeProfiles = helpers.importDirToAttrs ./modules/profiles/home;
+      
+      # Individual modules (for direct importing)
+      nixosModules = helpers.importDirToAttrs ./modules;
+      
+      # Host configurations
       nixosConfigurations = {
-        # Define your specific hosts
-        hyprland_minimal = mkHost "laptop";
-        nixos = mkHost "laptop";
-        laptop = mkHost "laptop";
+        # Hyprland minimal laptop - uses profiles instead of direct module imports
+        hyprland_minimal = mkHost {
+          hostname = "hyprland_laptop";
+          profiles = [ "base" "desktop" "laptop" ];
+          homeProfiles = [ "base" "hyprland" ];
+        };
         
-        # Add more hosts as needed
-        # desktop = mkHost "desktop";
-        # server = mkHost "server";
+        # Full desktop configuration
+        hyprland_desktop = mkHost {
+          hostname = "hyprland_desktop";
+          profiles = [ "base" "desktop" "workstation" ];
+          homeProfiles = [ "base" "hyprland" "development" ];
+        };
+        
+        # Legacy/default host (for backward compatibility)
+        nixos = self.nixosConfigurations.hyprland_minimal;
       };
     };
 }

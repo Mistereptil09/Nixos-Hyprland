@@ -4,6 +4,8 @@
   imports = [
     ./install.nix
     ./config.nix
+    ./shortcuts.nix
+    ./apps
   ];
   
   options.modules.hyprland = {

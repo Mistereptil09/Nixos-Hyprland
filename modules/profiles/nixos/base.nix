@@ -4,6 +4,7 @@
   # Import common modules
   imports = [
     ../../../modules/core
+    ../../core
   ];
   
   # Define the user option
@@ -42,6 +43,23 @@
       vim
       curl
       wget
+      htop
+      unzip
+      file
     ];
+    
+    # Time and locale settings
+    time.timeZone = lib.mkDefault "UTC";
+    i18n.defaultLocale = lib.mkDefault "en_US.UTF-8";
+    
+    # Default user
+    users.users.antonio = {
+      isNormalUser = true;
+      extraGroups = [ "wheel" "networkmanager" "video" "audio" ];
+      initialPassword = "changeme";
+    };
+    
+    # Sudo settings
+    security.sudo.wheelNeedsPassword = false;
   };
 }
