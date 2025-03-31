@@ -1,18 +1,26 @@
 { config, lib, pkgs, ... }:
 
-{
-  networking = {
-    networkmanager.enable = true;
-    firewall = {
-      enable = true;
-      allowPing = true;
-    };
+let
+  cfg = config.modules.core.networking;
+in {
+  options.modules.core.networking = {
+    enable = lib.mkEnableOption "Enable networking configuration";
   };
-  
-  # Enable mDNS
-  services.avahi = {
-    enable = true;
-    nssmdns4 = true;
-    openFirewall = true;
+
+  config = lib.mkIf cfg.enable {
+    networking = {
+      networkmanager.enable = true;
+      firewall = {
+        enable = true;
+        allowPing = true;
+      };
+    };
+    
+    # Enable mDNS
+    services.avahi = {
+      enable = true;
+      nssmdns4 = true;
+      openFirewall = true;
+    };
   };
 }
