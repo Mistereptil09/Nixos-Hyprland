@@ -1,16 +1,21 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, nixosProfiles, ... }:
 
 {
-  # Import minimal profile
+  # Explicitly import profiles right in the host file
   imports = [
-    ../../modules/profiles/nixos/minimal.nix
+    # Import the minimal system profile
+    nixosProfiles.minimal
+    
+    # You could add other profiles directly
+    # nixosProfiles.base
+    # nixosProfiles.desktop
   ];
-
+  
   # Host-specific configuration
   networking.hostName = "nixos-minimal";
 
   # System settings
-  system.stateVersion = "23.11"; # Update to match your NixOS version
+  system.stateVersion = "23.11";
 
   # Any host-specific overrides can go here
   environment.systemPackages = with pkgs; [
@@ -18,7 +23,6 @@
   ];
 
   # Customize minimal installation if needed
-  # For example, you might want to enable additional services
   services = {
     # Add any host-specific services
   };

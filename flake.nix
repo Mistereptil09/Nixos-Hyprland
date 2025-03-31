@@ -15,83 +15,26 @@
       lib = nixpkgs.lib;
       system = "x86_64-linux";
       
-      # Get current user information
-      username = builtins.getEnv "USER";
-      # Default to "antonio" if USER env var is empty (e.g., when run with sudo)
-      defaultUser = if username != "" then username else "antonio";
-      
       # Import helper functions
       helpers = import ./common/lib/helpers.nix { inherit lib; };
       
-      # Function to create a host configuration
-      mkHost = { hostname, profiles ? [], homeProfiles ? [], username ? defaultUser }: 
-        nixpkgs.lib.nixosSystem {
-          inherit system;
-          specialArgs = { 
-            inherit inputs system lib;
-            profiles = self.nixosProfiles;
-            homeProfiles = self.homeProfiles;
-            currentUsername = username;
-          };
-          modules = [
-            # Import hardware configuration
-            ./hosts/${hostname}/hardware.nix
-            
-            # Import the host's main configuration
-            ./hosts/${hostname}/default.nix
-            
-            # Add home-manager module
-            home-manager.nixosModules.home-manager {
-              home-manager.useGlobalPkgs = true;
-              home-manager.useUserPackages = true;
-              home-manager.extraSpecialArgs = {
-                inherit inputs system; 
-                profiles = self.homeProfiles;
-                username = username;
-              };
-              home-manager.users.${username} = import ./hosts/${hostname}/home.nix;
-            }
-            
-            # Import all requested system profiles
-            ({...}: { imports = map (profile: self.nixosProfiles.${profile}) profiles; })
-          ];
-        };
+      # Import profiles and hosts from dedicated files
+      profiles = import ./profiles.nix { inherit lib helpers; };
+      hosts = import ./hosts.nix { 
+        inherit self lib system nixpkgs home-manager; 
+        # Forward inputs to hosts.nix
+        inputs = inputs;
+      };
     in
     {
-      # NixOS system profiles
-      nixosProfiles = helpers.importDirToAttrs ./modules/profiles/nixos;
-      
-      # Home-manager user profiles
-      homeProfiles = helpers.importDirToAttrs ./modules/profiles/home;
-      
-      # Individual modules (for direct importing)
-      nixosModules = helpers.importDirToAttrs ./modules;
+      # Make profiles available in the flake
+      nixosProfiles = profiles.nixosProfiles;
+      homeProfiles = profiles.homeProfiles;
       
       # Host configurations
-      nixosConfigurations = {
-        # Hyprland minimal laptop - uses profiles instead of direct module imports
-        hyprland_minimal = mkHost {
-          hostname = "hyprland_laptop";
-          profiles = [ "base" "desktop" "laptop" ];
-          homeProfiles = [ "base" "hyprland" ];
-        };
-        
-        # Full desktop configuration
-        hyprland_desktop = mkHost {
-          hostname = "hyprland_desktop";
-          profiles = [ "base" "desktop" "workstation" ];
-          homeProfiles = [ "base" "hyprland" "development" ];
-        };
-        
-        # New minimal configuration
-        minimal = mkHost {
-          hostname = "minimal";
-          profiles = [ "minimal" ];
-          homeProfiles = [ "minimal" ];
-        };
-        
-        # Legacy/default host (for backward compatibility)
-        nixos = self.nixosConfigurations.hyprland_minimal;
+      nixosConfigurations = hosts.hosts // {
+        # Default host
+        nixos = hosts.hosts.minimal;
       };
     };
 }

@@ -1,9 +1,14 @@
-{ config, lib, pkgs, profiles, username, ... }:
+{ config, lib, pkgs, homeProfiles, username, ... }:
 
 {
-  # Import minimal home profile
+  # Explicitly import home profiles
   imports = [
-    (profiles.minimal)
+    # Import the minimal home profile
+    homeProfiles.minimal
+    
+    # Add more profiles as needed
+    # homeProfiles.development
+    # homeProfiles.gaming
   ];
 
   # Host-specific home configuration
@@ -21,6 +26,4 @@
     # userName = "Your Name";
     # userEmail = "your.email@example.com";
   };
-
-  # Add any other host-specific home-manager settings
 }
