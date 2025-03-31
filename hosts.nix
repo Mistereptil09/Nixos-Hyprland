@@ -15,7 +15,7 @@ let
       };
       modules = [
         # Hardware and main configuration
-        ./hosts/${hostname}/hardware.nix
+        ./hosts/${hostname}/hardware-configuration.nix
         ./hosts/${hostname}/default.nix
         
         # Home-manager module

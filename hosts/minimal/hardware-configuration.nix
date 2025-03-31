@@ -6,9 +6,15 @@ let
     ⚠️ ERROR: You need to generate a proper hardware-configuration.nix file!
     
     Please do one of the following:
-    1. Run 'sudo nixos-generate-config' on your system and copy the generated
-       hardware-configuration.nix to this file
+    1. Run this command to generate your hardware config:
+       $ nixos-generate-config --show-hardware-config > hardware-configuration.nix
+       
+       Then copy its contents to this file and set isPlaceholder = false at the top
+       
     2. Or manually configure the hardware settings and set isPlaceholder = false
+    
+    After updating this file, rebuild with:
+    $ sudo nixos-rebuild switch --flake .#minimal
     
     This file contains PLACEHOLDER values that will NOT work on a real system.
   '';
