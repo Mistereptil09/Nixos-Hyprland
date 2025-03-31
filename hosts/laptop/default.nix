@@ -3,7 +3,6 @@
 {
   imports = [
     # Hardware configuration is imported directly
-    # If it doesn't exist, we'll catch the error below
     ./hardware-configuration.nix
     
     # Common system configuration
