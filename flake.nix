@@ -39,7 +39,6 @@
           specialArgs = { inherit inputs; };
           modules = [
             ./hosts/minimal
-            # Other modules you might need
           ];
         };
         nixos = hosts.hosts.minimal;
