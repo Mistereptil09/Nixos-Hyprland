@@ -10,7 +10,7 @@ with lib;
   config = mkIf config.core.boot.enable {
     # Boot loader configuration
     boot.loader = {
-      devices = [ "/vda/vda1" ]; # Replace with your boot disk
+      grub.devices = [ "/vda/vda1" ]; # Replace with your boot disk
       systemd-boot = {
         enable = true;
       };
