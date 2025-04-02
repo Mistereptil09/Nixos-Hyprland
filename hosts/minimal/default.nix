@@ -1,16 +1,15 @@
-# hosts/minimal/default.nix (system config)
-{ nixosProfiles, ... }:
+{ nixosProfiles, lib, ... }:
 
 {
   imports = [ nixosProfiles.minimal ];
   
   networking.hostName = "minimal";
   
-  # Use mkForce to ensure this definition takes precedence
-  user.name = lib.mkForce "antonio";
-  initialPassword = lib.mkForce "root";
-  user.isNormalUser = true;
-  user.extraGroups = [ "wheel" "networkmanager" ];
+  # Fix: proper function arguments and attribute structure
+  user = {
+    name = lib.mkForce "antonio";
+    initialPassword = lib.mkForce "root";
+  };  
 
   # Home-manager imports the user config
   home-manager.users.antonio = import ./home.nix;

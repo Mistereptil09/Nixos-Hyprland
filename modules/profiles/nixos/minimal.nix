@@ -16,6 +16,8 @@
   user = {
     name = "nixos";
     initialPassword = "nixos";
+    isNormalUser = true;
+    extraGroups = [ "wheel" "networkmanager" ];
   };
   
   # Allow unfree packages
