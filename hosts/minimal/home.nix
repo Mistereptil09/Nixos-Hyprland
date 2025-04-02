@@ -1,29 +1,9 @@
-{ config, lib, pkgs, homeProfiles, username, ... }:
+# hosts/minimal/home.nix (user config)
+{ homeProfiles, ... }:
 
 {
-  # Explicitly import home profiles
-  imports = [
-    # Import the minimal home profile
-    homeProfiles.minimal
-    
-    # Add more profiles as needed
-    # homeProfiles.development
-    # homeProfiles.gaming
-  ];
-
-  # Host-specific home configuration
-  home.username = username;
-  home.homeDirectory = "/home/${username}";
-
-  # Any host-specific home overrides can go here
-  home.packages = with pkgs; [
-    # Add any additional host-specific user packages
-  ];
-
-  # User-specific configuration
-  programs.git = {
-    # Uncomment and customize:
-    # userName = "Your Name";
-    # userEmail = "your.email@example.com";
-  };
+  imports = [ homeProfiles.minimal ];
+  
+  # User-specific programs and settings
+  programs.git.userEmail = "user@example.com";
 }

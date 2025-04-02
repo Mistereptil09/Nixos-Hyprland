@@ -1,9 +1,25 @@
+# profiles.nix
 { lib, helpers, ... }:
 
-{
-  # Use helpers to automatically import all profiles
+let
+  # Import regular profiles automatically
   nixosProfiles = helpers.importDirToAttrs ./modules/profiles/nixos;
-  
-  # Home-manager profiles with automatic import
   homeProfiles = helpers.importDirToAttrs ./modules/profiles/home;
+in {
+  # Make all profiles available
+  inherit nixosProfiles homeProfiles;
+  
+  # Create meta-profiles that combine multiple profiles
+  metaProfiles = {
+    fullWorkstation = {
+      system = [
+        nixosProfiles.desktop
+        nixosProfiles.development
+      ];
+      user = [
+        homeProfiles.desktop
+        homeProfiles.development
+      ];
+    };
+  };
 }

@@ -1,47 +1,33 @@
 {
-  description = "NixOS configuration with Hyprland";
+  description = "NixOS + Hyprland Configuration";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    hyprland.url = "github:hyprwm/Hyprland";
   };
 
-  outputs = { self, nixpkgs, home-manager, ... } @ inputs:
-    let
-      lib = nixpkgs.lib;
-      system = "x86_64-linux";
-      
-      # Import helper functions
-      helpers = import ./common/lib/helpers.nix { inherit lib; };
-      
-      # Import profiles and hosts from dedicated files
-      profiles = import ./profiles.nix { inherit lib helpers; };
-      hosts = import ./hosts.nix { 
-        inherit self lib system nixpkgs home-manager; 
-        # Forward inputs to hosts.nix
-        inputs = inputs;
-      };
-    in
-    {
-      # Make profiles available in the flake
-      nixosProfiles = profiles.nixosProfiles;
-      homeProfiles = profiles.homeProfiles;
-      
-      # Host configurations
-      nixosConfigurations = {
-        minimal = nixpkgs.lib.nixosSystem {
-          # Adjust the system as needed for your hardware
-          system = "x86_64-linux"; 
-          specialArgs = { inherit inputs; };
-          modules = [
-            ./hosts/minimal
-          ];
-        };
-        nixos = hosts.hosts.minimal;
-      };
+  outputs = { self, nixpkgs, home-manager, ... }: 
+  let
+    lib = nixpkgs.lib;
+    
+    # Import helper functions
+    helpers = import ./common/lib/helpers.nix { inherit lib; };
+    
+    # Import profiles
+    profiles = import ./profiles.nix { 
+      inherit lib helpers; 
     };
+  in {
+    # Make profiles available
+    inherit (profiles) nixosProfiles homeProfiles;
+    
+    # Import all host configurations from hosts.nix
+    nixosConfigurations = import ./hosts.nix { 
+      inherit self nixpkgs home-manager; 
+    };
+  };
 }

@@ -1,50 +1,42 @@
-{ lib, self, system, nixpkgs, home-manager, inputs, ... }:
+{ self, nixpkgs, home-manager, ... }:
 
 let
-  defaultUser = "antonio";
+  system = "x86_64-linux";
   
-  # Simplified host creation function - no automatic profile imports
-  mkHost = { hostname, username ? defaultUser }: 
+  # Host discovery - finds all directories in ./hosts/
+  hostNames = builtins.attrNames (builtins.readDir ./hosts);
+  
+  # Host creation function
+  mkHost = hostname: 
     nixpkgs.lib.nixosSystem {
       inherit system;
-      specialArgs = { 
-        inherit inputs system lib;
-        nixosProfiles = self.nixosProfiles;
-        homeProfiles = self.homeProfiles;
-        currentUsername = username;
+      specialArgs = {
+        inherit self hostname;
+        inherit (self) nixosProfiles homeProfiles;
       };
       modules = [
-        # Hardware and main configuration
-        ./hosts/${hostname}/hardware-configuration.nix
-        ./hosts/${hostname}/default.nix
+        # Core modules
+        ./modules/core
         
-        # Home-manager module
+        # Host-specific config
+        ./hosts/${hostname}
+        
+        # Root hardware config
+        ./hardware-configuration.nix
+        
+        # Home-manager
         home-manager.nixosModules.home-manager {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
-          home-manager.extraSpecialArgs = {
-            inherit inputs system; 
-            homeProfiles = self.homeProfiles;
-            username = username;
+          home-manager.extraSpecialArgs = { 
+            inherit (self) homeProfiles; 
           };
-          home-manager.users.${username} = import ./hosts/${hostname}/home.nix;
         }
       ];
     };
-in
-{
-  # Host configurations - simpler without profile lists
-  hosts = {
-    # Minimal configuration
-    minimal = mkHost {
-      hostname = "minimal";
-      username = defaultUser;
-    };
-    
-    # Add other hosts as needed
-    # hyprland_desktop = mkHost {
-    #   hostname = "hyprland_desktop";
-    #   username = defaultUser;
-    # };
-  };
-}
+  
+  # Create configurations for all hosts
+  nixosConfigs = builtins.listToAttrs (
+    map (name: { inherit name; value = mkHost name; }) hostNames
+  );
+in nixosConfigs
