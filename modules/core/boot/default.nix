@@ -10,15 +10,17 @@ with lib;
   config = mkIf config.core.boot.enable {
     # Boot loader configuration
     boot.loader = {
+      devices = [ "/vda/vda1" ]; # Replace with your boot disk
       systemd-boot = {
         enable = true;
       };
-      efi = {
-        canTouchEfiVariables = true;
-        efiSysMountPoint = "/boot";  # Make sure this matches your boot partition
-      };
+      # efi = {
+      #   canTouchEfiVariables = true;
+      #   efiSysMountPoint = "/boot";  # Make sure this matches your boot partition
+      # };
       # Explicitly disable GRUB to avoid conflicts
-      grub.enable = false;
+      grub.enable = true;
+      
     };
     
     # Add other boot-related settings
