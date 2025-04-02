@@ -12,7 +12,6 @@ with lib;
     boot.loader = {
       grub = {
         enable = true;
-        device = "nodev";       # Use "nodev" when targeting a specific disk
         devices = [ "/dev/vda" ]; # For VMs, install to the whole disk
       };
     };
